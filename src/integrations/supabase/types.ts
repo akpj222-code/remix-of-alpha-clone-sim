@@ -14,16 +14,243 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      kyc_requests: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          address: string | null
+          annual_income: string | null
+          annual_turnover: string | null
+          board_resolution_url: string | null
+          business_address: string | null
+          business_nature: string | null
+          cac_certificate_url: string | null
+          chn: string | null
+          city: string | null
+          company_name: string | null
+          country: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          employment_status: string | null
+          full_name: string | null
+          id: string
+          id_document_url: string | null
+          incorporation_date: string | null
+          phone: string | null
+          registration_number: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          selfie_url: string | null
+          signatory_name: string | null
+          state: string | null
+          status: Database["public"]["Enums"]["kyc_status"] | null
+          submitted_at: string | null
+          tax_clearance_url: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          address?: string | null
+          annual_income?: string | null
+          annual_turnover?: string | null
+          board_resolution_url?: string | null
+          business_address?: string | null
+          business_nature?: string | null
+          cac_certificate_url?: string | null
+          chn?: string | null
+          city?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          employment_status?: string | null
+          full_name?: string | null
+          id?: string
+          id_document_url?: string | null
+          incorporation_date?: string | null
+          phone?: string | null
+          registration_number?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          selfie_url?: string | null
+          signatory_name?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["kyc_status"] | null
+          submitted_at?: string | null
+          tax_clearance_url?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          address?: string | null
+          annual_income?: string | null
+          annual_turnover?: string | null
+          board_resolution_url?: string | null
+          business_address?: string | null
+          business_nature?: string | null
+          cac_certificate_url?: string | null
+          chn?: string | null
+          city?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          employment_status?: string | null
+          full_name?: string | null
+          id?: string
+          id_document_url?: string | null
+          incorporation_date?: string | null
+          phone?: string | null
+          registration_number?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          selfie_url?: string | null
+          signatory_name?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["kyc_status"] | null
+          submitted_at?: string | null
+          tax_clearance_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      portfolios: {
+        Row: {
+          average_price: number
+          company_name: string
+          created_at: string | null
+          id: string
+          shares: number
+          symbol: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          average_price: number
+          company_name: string
+          created_at?: string | null
+          id?: string
+          shares?: number
+          symbol: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          average_price?: number
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          shares?: number
+          symbol?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      trades: {
+        Row: {
+          company_name: string
+          created_at: string | null
+          fee: number | null
+          id: string
+          price_per_share: number
+          shares: number
+          symbol: string
+          total_amount: number
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string | null
+          fee?: number | null
+          id?: string
+          price_per_share: number
+          shares: number
+          symbol: string
+          total_amount: number
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string | null
+          fee?: number | null
+          id?: string
+          price_per_share?: number
+          shares?: number
+          symbol?: string
+          total_amount?: number
+          trade_type?: Database["public"]["Enums"]["trade_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      account_type: "individual" | "corporate"
+      app_role: "admin" | "user"
+      kyc_status: "not_started" | "pending" | "approved" | "rejected"
+      trade_type: "buy" | "sell"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +377,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_type: ["individual", "corporate"],
+      app_role: ["admin", "user"],
+      kyc_status: ["not_started", "pending", "approved", "rejected"],
+      trade_type: ["buy", "sell"],
+    },
   },
 } as const
