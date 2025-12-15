@@ -29,9 +29,9 @@ export default function Landing() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-              <span className="text-lg font-bold text-primary-foreground">CS</span>
+              <span className="text-lg font-bold text-primary-foreground">TG</span>
             </div>
-            <span className="text-xl font-bold text-foreground">Alpha</span>
+            <span className="text-xl font-bold text-foreground">TAMIC GROUP</span>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/auth">
@@ -51,10 +51,10 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
               Invest in Your Future with{' '}
-              <span className="text-primary">CS Alpha</span>
+              <span className="text-primary">TAMIC GROUP</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground md:text-xl">
-              Your trusted platform for US stock trading. Start building your investment portfolio today with real-time market data and seamless trading experience.
+              Your trusted platform for US stocks and cryptocurrency trading. Start building your investment portfolio today with real-time market data.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/auth?mode=signup">
@@ -76,7 +76,7 @@ export default function Landing() {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <h2 className="text-3xl font-bold text-center text-foreground mb-12">
-            Why Choose CS Alpha?
+            Why Choose TAMIC GROUP?
           </h2>
           <div className="grid gap-6 md:grid-cols-3">
             {features.map((feature) => (
@@ -107,7 +107,7 @@ export default function Landing() {
                 Ready to Start Investing?
               </h2>
               <p className="text-primary-foreground/80 mb-8 max-w-lg mx-auto">
-                Join thousands of investors who trust CS Alpha for their trading needs. Get started with $10,000 in virtual funds.
+                Join thousands of investors who trust TAMIC GROUP for their trading needs. Get started with $10,000 in virtual funds.
               </p>
               <Link to="/auth?mode=signup">
                 <Button size="lg" variant="secondary">
@@ -125,12 +125,12 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded gradient-primary">
-                <span className="text-sm font-bold text-primary-foreground">CS</span>
+                <span className="text-sm font-bold text-primary-foreground">TG</span>
               </div>
-              <span className="font-semibold text-foreground">Alpha</span>
+              <span className="font-semibold text-foreground">TAMIC GROUP</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 CS Alpha. Investment simulation platform.
+              © 2024 TAMIC GROUP. Investment simulation platform.
             </p>
           </div>
         </div>

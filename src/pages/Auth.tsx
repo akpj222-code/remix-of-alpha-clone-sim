@@ -98,7 +98,7 @@ export default function Auth() {
     } else {
       toast({
         title: 'Account created',
-        description: 'Welcome to CS Alpha! You can now sign in.',
+        description: 'Welcome to TAMIC GROUP! You can now sign in.',
       });
     }
   };
@@ -118,7 +118,7 @@ export default function Auth() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">
               <p className="text-sm font-semibold text-primary mb-6 tracking-wide">Step 1 <span className="text-muted-foreground font-normal">Account Type</span></p>
-              <h1 className="text-3xl font-bold text-primary mb-2">How will you use<br/>CS Alpha?</h1>
+              <h1 className="text-3xl font-bold text-primary mb-2">How will you use<br/>TAMIC GROUP?</h1>
               <p className="text-muted-foreground text-sm">Tap to select one</p>
             </div>
 
@@ -151,7 +151,7 @@ export default function Auth() {
             </div>
 
             <div className="mt-8 text-center text-xs text-muted-foreground px-8">
-              By clicking "Proceed" button, you agree to CS Alpha's <a href="#" className="text-primary font-semibold">Terms and Conditions</a>.
+              By clicking "Proceed" button, you agree to TAMIC GROUP's <a href="#" className="text-primary font-semibold">Terms and Conditions</a>.
             </div>
 
             <Button 
@@ -179,7 +179,7 @@ export default function Auth() {
               <CardDescription>
                 {isSignUp
                   ? 'Step 2: Personal Information'
-                  : 'Sign in to continue to CS Alpha'}
+                  : 'Sign in to continue to TAMIC GROUP'}
               </CardDescription>
             </CardHeader>
             <CardContent className="px-0">
