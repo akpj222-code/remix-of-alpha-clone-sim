@@ -11,6 +11,7 @@ export interface Stock {
   category: string;
 }
 
+// Extended list of popular US stocks
 const US_STOCKS = [
   { symbol: 'AAPL', name: 'Apple Inc.', category: 'Technology' },
   { symbol: 'MSFT', name: 'Microsoft Corporation', category: 'Technology' },
@@ -24,6 +25,19 @@ const US_STOCKS = [
   { symbol: 'JNJ', name: 'Johnson & Johnson', category: 'Healthcare' },
   { symbol: 'WMT', name: 'Walmart Inc.', category: 'Retail' },
   { symbol: 'PG', name: 'Procter & Gamble Co.', category: 'Consumer Goods' },
+  { symbol: 'MA', name: 'Mastercard Inc.', category: 'Finance' },
+  { symbol: 'HD', name: 'Home Depot Inc.', category: 'Retail' },
+  { symbol: 'DIS', name: 'Walt Disney Co.', category: 'Entertainment' },
+  { symbol: 'BAC', name: 'Bank of America Corp.', category: 'Finance' },
+  { symbol: 'XOM', name: 'Exxon Mobil Corp.', category: 'Energy' },
+  { symbol: 'PFE', name: 'Pfizer Inc.', category: 'Healthcare' },
+  { symbol: 'KO', name: 'Coca-Cola Co.', category: 'Consumer Goods' },
+  { symbol: 'NFLX', name: 'Netflix Inc.', category: 'Technology' },
+  { symbol: 'INTC', name: 'Intel Corporation', category: 'Technology' },
+  { symbol: 'AMD', name: 'Advanced Micro Devices', category: 'Technology' },
+  { symbol: 'CRM', name: 'Salesforce Inc.', category: 'Technology' },
+  { symbol: 'ORCL', name: 'Oracle Corporation', category: 'Technology' },
+  { symbol: 'ADBE', name: 'Adobe Inc.', category: 'Technology' },
 ];
 
 export function useStocks() {
@@ -56,10 +70,29 @@ export function useStocks() {
     } catch (err) {
       console.error('Error fetching stocks:', err);
       setError('Failed to fetch stock prices');
-      // Use fallback simulated data
       setStocks(generateSimulatedStocks());
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Search any stock by symbol
+  const searchStock = useCallback(async (symbol: string): Promise<Stock | null> => {
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('stock-prices', {
+        body: { symbols: [symbol.toUpperCase()], search: true }
+      });
+      
+      if (fnError || !data?.stocks?.length) return null;
+      
+      const stockData = data.stocks[0];
+      return {
+        ...stockData,
+        name: stockData.name || symbol.toUpperCase(),
+        category: 'Other'
+      };
+    } catch {
+      return null;
     }
   }, []);
 
@@ -67,7 +100,7 @@ export function useStocks() {
     return stocks.find(s => s.symbol === symbol);
   }, [stocks]);
 
-  return { stocks, loading, error, fetchStocks, getStock };
+  return { stocks, loading, error, fetchStocks, searchStock, getStock };
 }
 
 function generateSimulatedStocks(): Stock[] {
@@ -90,18 +123,13 @@ function generateSimulatedStocks(): Stock[] {
 
 function getBasePrice(symbol: string): number {
   const prices: Record<string, number> = {
-    'AAPL': 178.50,
-    'MSFT': 378.25,
-    'GOOGL': 141.80,
-    'AMZN': 178.90,
-    'TSLA': 248.50,
-    'META': 505.75,
-    'NVDA': 875.30,
-    'JPM': 195.40,
-    'V': 278.60,
-    'JNJ': 156.80,
-    'WMT': 165.20,
-    'PG': 158.90
+    'AAPL': 178.50, 'MSFT': 378.25, 'GOOGL': 141.80, 'AMZN': 178.90,
+    'TSLA': 248.50, 'META': 505.75, 'NVDA': 875.30, 'JPM': 195.40,
+    'V': 278.60, 'JNJ': 156.80, 'WMT': 165.20, 'PG': 158.90,
+    'MA': 458.30, 'HD': 345.20, 'DIS': 112.50, 'BAC': 35.80,
+    'XOM': 105.40, 'PFE': 28.90, 'KO': 62.30, 'NFLX': 485.60,
+    'INTC': 42.50, 'AMD': 165.80, 'CRM': 265.40, 'ORCL': 125.60,
+    'ADBE': 545.20
   };
   return prices[symbol] || 100;
 }

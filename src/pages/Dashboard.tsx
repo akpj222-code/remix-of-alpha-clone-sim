@@ -147,7 +147,7 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-semibold text-foreground">Business –</h2>
-            <span className="text-sm text-muted-foreground">Explore CardinalStone businesses</span>
+            <span className="text-sm text-muted-foreground">Explore TAMIC GROUP services</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
