@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, TrendingDown, Wallet, Briefcase, FileText, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp, Info, ChevronDown, ChevronUp, Shield, Lock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { usePortfolio } from '@/hooks/usePortfolio';
@@ -11,25 +10,18 @@ import { useKYC } from '@/hooks/useKYC';
 import { useStocks } from '@/hooks/useStocks';
 import { cn } from '@/lib/utils';
 
-const kycStatusColors: Record<string, string> = {
-  not_started: 'bg-muted text-muted-foreground',
-  pending: 'bg-warning/10 text-warning',
-  approved: 'bg-success/10 text-success',
-  rejected: 'bg-destructive/10 text-destructive',
-};
-
-const kycStatusLabels: Record<string, string> = {
-  not_started: 'Not Started',
-  pending: 'Pending Review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-};
+type PositionView = 'net-worth' | 'investment' | 'currency';
+type Currency = 'NGN' | 'USD' | 'GBP';
 
 export default function Dashboard() {
   const { profile } = useProfile();
-  const { portfolio, trades } = usePortfolio();
+  const { portfolio } = usePortfolio();
   const { kycRequest } = useKYC();
   const { stocks, fetchStocks } = useStocks();
+  const [positionView, setPositionView] = useState<PositionView>('net-worth');
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('NGN');
+  const [showValue, setShowValue] = useState(false);
+  const [investmentsExpanded, setInvestmentsExpanded] = useState(true);
 
   useEffect(() => {
     fetchStocks();
@@ -44,199 +36,243 @@ export default function Dashboard() {
     return total + (item.shares * currentPrice);
   }, 0);
 
-  // Calculate daily gain/loss (simplified - uses change from API)
-  const dailyChange = portfolio.reduce((total, item) => {
-    const stock = stocks.find(s => s.symbol === item.symbol);
-    return total + (item.shares * (stock?.change || 0));
-  }, 0);
+  // Total net worth (balance + portfolio)
+  const totalNetWorth = (profile?.balance || 0) + portfolioValue;
 
-  const topStocks = stocks.slice(0, 4);
+  // Currency conversion rates (simplified)
+  const rates: Record<Currency, number> = {
+    NGN: 1500,
+    USD: 1,
+    GBP: 0.79,
+  };
+
+  const formatCurrency = (amount: number, currency: Currency) => {
+    const symbols: Record<Currency, string> = { NGN: '₦', USD: '$', GBP: '£' };
+    const converted = amount * rates[currency];
+    return `${symbols[currency]}${converted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const getDisplayValue = () => {
+    switch (positionView) {
+      case 'net-worth':
+        return totalNetWorth;
+      case 'investment':
+        return portfolioValue;
+      case 'currency':
+        return totalNetWorth;
+      default:
+        return totalNetWorth;
+    }
+  };
 
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in">
-        {/* Welcome */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Welcome back, {profile?.full_name?.split(' ')[0] || 'Investor'}
-            </h1>
-            <p className="text-muted-foreground">
-              Here's your investment overview
-            </p>
+      <div className="space-y-6 animate-fade-in pb-8">
+        {/* Financial Position Section */}
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Financial Position:</h2>
+          
+          {/* Position Toggle */}
+          <div className="flex flex-wrap items-center gap-4 mb-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="position"
+                checked={positionView === 'net-worth'}
+                onChange={() => setPositionView('net-worth')}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className={cn("text-sm", positionView === 'net-worth' ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+                Net Worth
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="position"
+                checked={positionView === 'investment'}
+                onChange={() => setPositionView('investment')}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className={cn("text-sm", positionView === 'investment' ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+                Investment/Cash
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="position"
+                checked={positionView === 'currency'}
+                onChange={() => setPositionView('currency')}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className={cn("text-sm", positionView === 'currency' ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+                By Currency
+              </span>
+            </label>
           </div>
-          <Badge className={cn('self-start', kycStatusColors[kycStatus])}>
-            KYC: {kycStatusLabels[kycStatus]}
-          </Badge>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Available Balance
-              </CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">
-                ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Portfolio Value
-              </CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">
-                ${portfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {portfolio.length} holdings
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Today's Change
-              </CardTitle>
-              {dailyChange >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-success" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-destructive" />
-              )}
-            </CardHeader>
-            <CardContent>
-              <p className={cn(
-                "text-2xl font-bold",
-                dailyChange >= 0 ? "text-success" : "text-destructive"
-              )}>
-                {dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* KYC CTA */}
-          {kycStatus === 'not_started' && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">Complete Your KYC</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Verify your identity to unlock all trading features
-                    </p>
-                    <Link to="/kyc">
-                      <Button size="sm" className="mt-4 gap-2">
-                        Start KYC <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
+          {/* Net Worth Card */}
+          <Card className="bg-card border shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {positionView === 'net-worth' ? 'Total Net Worth' : positionView === 'investment' ? 'Investment Value' : 'Total by Currency'}
+                  </span>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Top Stocks Preview */}
-          <Card className={kycStatus === 'not_started' ? '' : 'md:col-span-2'}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Market Overview</CardTitle>
-              <Link to="/stocks">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  View All <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {topStocks.map((stock) => (
-                  <div
-                    key={stock.symbol}
-                    className="flex items-center justify-between p-3 rounded-lg border"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground">{stock.symbol}</p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[120px]">
-                        {stock.name}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-foreground">
-                        ${stock.price.toFixed(2)}
-                      </p>
-                      <p className={cn(
-                        "text-xs",
-                        stock.change >= 0 ? "text-success" : "text-destructive"
-                      )}>
-                        {stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                <button 
+                  onClick={() => setShowValue(!showValue)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
               </div>
+              <p className="text-2xl font-bold text-foreground mt-2">
+                {showValue ? formatCurrency(getDisplayValue(), selectedCurrency) : '******'}
+              </p>
             </CardContent>
           </Card>
+
+          {/* Carousel Indicator */}
+          <div className="flex justify-center mt-4 gap-1">
+            <div className="w-6 h-1.5 rounded-full bg-primary"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-muted"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-muted"></div>
+          </div>
         </div>
 
-        {/* Recent Trades */}
-        {trades.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Recent Trades</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {trades.slice(0, 5).map((trade) => (
-                  <div
-                    key={trade.id}
-                    className="flex items-center justify-between p-3 rounded-lg border"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant={trade.trade_type === 'buy' ? 'default' : 'secondary'}
-                        className={cn(
-                          trade.trade_type === 'buy' 
-                            ? 'bg-success/10 text-success' 
-                            : 'bg-destructive/10 text-destructive'
-                        )}
-                      >
-                        {trade.trade_type.toUpperCase()}
-                      </Badge>
-                      <div>
-                        <p className="font-medium text-foreground">{trade.symbol}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {trade.shares} shares @ ${trade.price_per_share.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-foreground">
-                        ${trade.total_amount.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(trade.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
+        {/* Business Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Business –</h2>
+            <span className="text-sm text-muted-foreground">Explore CardinalStone businesses</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Link to="/stocks">
+              <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-6 flex flex-col items-center text-center">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <Shield className="h-8 w-8 text-primary" />
                   </div>
-                ))}
+                  <span className="text-sm font-medium text-foreground">Securities Trading</span>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/portfolio">
+              <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-6 flex flex-col items-center text-center">
+                  <div className="h-16 w-16 rounded-full bg-warning/10 flex items-center justify-center mb-3">
+                    <Lock className="h-8 w-8 text-warning" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">Asset Management</span>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+
+        {/* Investments Overview */}
+        <div>
+          <button 
+            onClick={() => setInvestmentsExpanded(!investmentsExpanded)}
+            className="w-full flex items-center justify-between mb-4"
+          >
+            <h2 className="text-lg font-semibold text-foreground">Investments Overview</h2>
+            {investmentsExpanded ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </button>
+
+          {investmentsExpanded && (
+            <>
+              {/* Currency Tabs */}
+              <div className="flex items-center gap-4 mb-4 border-b border-border pb-2">
+                <button
+                  onClick={() => setSelectedCurrency('NGN')}
+                  className={cn(
+                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
+                    selectedCurrency === 'NGN' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
+                  )}
+                >
+                  <span className="text-lg">🇳🇬</span>
+                  <span className="text-sm font-medium">NGN</span>
+                </button>
+                <div className="h-4 w-px bg-border"></div>
+                <button
+                  onClick={() => setSelectedCurrency('USD')}
+                  className={cn(
+                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
+                    selectedCurrency === 'USD' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
+                  )}
+                >
+                  <span className="text-lg">🇺🇸</span>
+                  <span className="text-sm font-medium">USD</span>
+                </button>
+                <div className="h-4 w-px bg-border"></div>
+                <button
+                  onClick={() => setSelectedCurrency('GBP')}
+                  className={cn(
+                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
+                    selectedCurrency === 'GBP' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
+                  )}
+                >
+                  <span className="text-lg">🇬🇧</span>
+                  <span className="text-sm font-medium">GBP</span>
+                </button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+
+              {/* Investment Value Display */}
+              <Card className="bg-card border shadow-sm">
+                <CardContent className="p-6">
+                  <p className="text-center text-2xl font-bold text-foreground mb-4">
+                    {formatCurrency(totalNetWorth, selectedCurrency)}
+                  </p>
+                  
+                  {/* Progress Bar */}
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${totalNetWorth > 0 ? Math.min((portfolioValue / totalNetWorth) * 100, 100) : 0}%` }}
+                    ></div>
+                  </div>
+                  
+                  <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                    <span>Portfolio: {formatCurrency(portfolioValue, selectedCurrency)}</span>
+                    <span>Cash: {formatCurrency(profile?.balance || 0, selectedCurrency)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* KYC Status Notice */}
+              {kycStatus !== 'approved' && (
+                <Card className="mt-4 bg-warning/5 border-warning/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                        <Shield className="h-5 w-5 text-warning" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">Complete KYC Verification</p>
+                        <p className="text-xs text-muted-foreground">Unlock all trading features</p>
+                      </div>
+                      <Link to="/kyc">
+                        <Button size="sm" variant="outline" className="border-warning text-warning hover:bg-warning/10">
+                          Start
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </AppLayout>
   );
