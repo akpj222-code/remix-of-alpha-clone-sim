@@ -2,7 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CS Alpha Design System - CardinalStone Blue Theme */
+/* TAMIC GROUP Design System - Professional Financial Theme */
+
+/* Apply Inter font globally */
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 @layer base {
   :root {

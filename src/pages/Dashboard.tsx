@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Info, ChevronDown, ChevronUp, Shield, Lock } from 'lucide-react';
+import { TrendingUp, Info, ChevronDown, ChevronUp, Shield, Lock, DollarSign, PoundSterling } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -11,7 +11,7 @@ import { useStocks } from '@/hooks/useStocks';
 import { cn } from '@/lib/utils';
 
 type PositionView = 'net-worth' | 'investment' | 'currency';
-type Currency = 'NGN' | 'USD' | 'GBP';
+type Currency = 'USD' | 'GBP';
 
 export default function Dashboard() {
   const { profile } = useProfile();
@@ -19,7 +19,7 @@ export default function Dashboard() {
   const { kycRequest } = useKYC();
   const { stocks, fetchStocks } = useStocks();
   const [positionView, setPositionView] = useState<PositionView>('net-worth');
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('NGN');
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('USD');
   const [showValue, setShowValue] = useState(false);
   const [investmentsExpanded, setInvestmentsExpanded] = useState(true);
 
@@ -39,15 +39,14 @@ export default function Dashboard() {
   // Total net worth (balance + portfolio)
   const totalNetWorth = (profile?.balance || 0) + portfolioValue;
 
-  // Currency conversion rates (simplified)
+  // Currency conversion rates
   const rates: Record<Currency, number> = {
-    NGN: 1500,
     USD: 1,
     GBP: 0.79,
   };
 
   const formatCurrency = (amount: number, currency: Currency) => {
-    const symbols: Record<Currency, string> = { NGN: '₦', USD: '$', GBP: '£' };
+    const symbols: Record<Currency, string> = { USD: '$', GBP: '£' };
     const converted = amount * rates[currency];
     return `${symbols[currency]}${converted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
@@ -191,19 +190,8 @@ export default function Dashboard() {
 
           {investmentsExpanded && (
             <>
-              {/* Currency Tabs */}
+              {/* Currency Tabs - Only USD and GBP */}
               <div className="flex items-center gap-4 mb-4 border-b border-border pb-2">
-                <button
-                  onClick={() => setSelectedCurrency('NGN')}
-                  className={cn(
-                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
-                    selectedCurrency === 'NGN' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
-                  )}
-                >
-                  <span className="text-lg">🇳🇬</span>
-                  <span className="text-sm font-medium">NGN</span>
-                </button>
-                <div className="h-4 w-px bg-border"></div>
                 <button
                   onClick={() => setSelectedCurrency('USD')}
                   className={cn(
@@ -211,7 +199,7 @@ export default function Dashboard() {
                     selectedCurrency === 'USD' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
                   )}
                 >
-                  <span className="text-lg">🇺🇸</span>
+                  <DollarSign className="h-4 w-4" />
                   <span className="text-sm font-medium">USD</span>
                 </button>
                 <div className="h-4 w-px bg-border"></div>
@@ -222,7 +210,7 @@ export default function Dashboard() {
                     selectedCurrency === 'GBP' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
                   )}
                 >
-                  <span className="text-lg">🇬🇧</span>
+                  <PoundSterling className="h-4 w-4" />
                   <span className="text-sm font-medium">GBP</span>
                 </button>
               </div>

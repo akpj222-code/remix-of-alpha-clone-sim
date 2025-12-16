@@ -7,6 +7,11 @@ export interface Profile {
   email: string;
   full_name: string | null;
   balance: number;
+  wallet_id: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_account_name: string | null;
+  bank_routing_number: string | null;
   created_at: string;
   updated_at: string;
 }
