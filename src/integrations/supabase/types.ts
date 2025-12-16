@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kyc_requests: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
@@ -152,27 +176,42 @@ export type Database = {
       profiles: {
         Row: {
           balance: number | null
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_name: string | null
+          bank_routing_number: string | null
           created_at: string | null
           email: string
           full_name: string | null
           id: string
           updated_at: string | null
+          wallet_id: string | null
         }
         Insert: {
           balance?: number | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          bank_routing_number?: string | null
           created_at?: string | null
           email: string
           full_name?: string | null
           id: string
           updated_at?: string | null
+          wallet_id?: string | null
         }
         Update: {
           balance?: number | null
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          bank_routing_number?: string | null
           created_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
           updated_at?: string | null
+          wallet_id?: string | null
         }
         Relationships: []
       }
@@ -229,6 +268,30 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_wallets: {
+        Row: {
+          address: string
+          created_at: string
+          currency: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          currency: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          currency?: string
+          id?: string
           user_id?: string
         }
         Relationships: []

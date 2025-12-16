@@ -15,6 +15,8 @@ import Portfolio from "./pages/Portfolio";
 import KYC from "./pages/KYC";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import Wallet from "./pages/Wallet";
+import Deposit from "./pages/Deposit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/stocks" element={<ProtectedRoute><Stocks /></ProtectedRoute>} />
               <Route path="/crypto" element={<ProtectedRoute><Crypto /></ProtectedRoute>} />
               <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+              <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+              <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
               <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
