@@ -1,13 +1,19 @@
 import { Link } from 'react-router-dom';
-import { TrendingUp, Shield, Briefcase, ArrowRight } from 'lucide-react';
+import { TrendingUp, Shield, Briefcase, ArrowRight, Bitcoin, BarChart3, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { TamicLogo } from '@/components/TamicLogo';
 
 const features = [
   {
     icon: TrendingUp,
     title: 'Real-Time Trading',
     description: 'Trade US stocks with live market data and instant execution'
+  },
+  {
+    icon: Bitcoin,
+    title: 'Cryptocurrency',
+    description: 'Access top 50 cryptocurrencies including Bitcoin, Ethereum, and more'
   },
   {
     icon: Briefcase,
@@ -18,6 +24,16 @@ const features = [
     icon: Shield,
     title: 'Secure Platform',
     description: 'Bank-level security with complete KYC verification'
+  },
+  {
+    icon: BarChart3,
+    title: 'Market Analytics',
+    description: 'Real-time market status with pre-market and after-hours indicators'
+  },
+  {
+    icon: Globe,
+    title: 'Global Access',
+    description: 'Trade from anywhere with our modern, responsive platform'
   }
 ];
 
@@ -25,12 +41,10 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur">
+      <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-50">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-              <span className="text-lg font-bold text-primary-foreground">TG</span>
-            </div>
+            <TamicLogo size="sm" />
             <span className="text-xl font-bold text-foreground">TAMIC GROUP</span>
           </div>
           <div className="flex items-center gap-2">
@@ -75,12 +89,15 @@ export default function Landing() {
       {/* Features */}
       <section className="py-20 bg-muted/30">
         <div className="container">
-          <h2 className="text-3xl font-bold text-center text-foreground mb-12">
+          <h2 className="text-3xl font-bold text-center text-foreground mb-4">
             Why Choose TAMIC GROUP?
           </h2>
-          <div className="grid gap-6 md:grid-cols-3">
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+            Your comprehensive investment platform for stocks and cryptocurrency trading
+          </p>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
-              <Card key={feature.title} className="border-none shadow-md">
+              <Card key={feature.title} className="border-none shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="pt-6">
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg gradient-primary">
                     <feature.icon className="h-6 w-6 text-primary-foreground" />
@@ -124,13 +141,11 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded gradient-primary">
-                <span className="text-sm font-bold text-primary-foreground">TG</span>
-              </div>
+              <TamicLogo size="sm" />
               <span className="font-semibold text-foreground">TAMIC GROUP</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 TAMIC GROUP. Investment simulation platform.
+              © {new Date().getFullYear()} TAMIC GROUP. Investment simulation platform.
             </p>
           </div>
         </div>
