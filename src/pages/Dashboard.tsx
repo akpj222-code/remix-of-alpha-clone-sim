@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Info, ChevronDown, ChevronUp, Shield, Lock, DollarSign, PoundSterling } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff, ChevronDown, ChevronUp, Shield, Lock, DollarSign, PoundSterling } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -125,7 +125,7 @@ export default function Dashboard() {
                   onClick={() => setShowValue(!showValue)}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <Info className="h-4 w-4" />
+                  {showValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               <p className="text-2xl font-bold text-foreground mt-2">
@@ -150,9 +150,9 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Link to="/stocks">
-              <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6 flex flex-col items-center text-center">
+            <Link to="/stocks" className="h-full">
+              <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
+                <CardContent className="p-6 flex flex-col items-center text-center h-full justify-center">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                     <Shield className="h-8 w-8 text-primary" />
                   </div>
@@ -161,9 +161,9 @@ export default function Dashboard() {
               </Card>
             </Link>
 
-            <Link to="/portfolio">
-              <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6 flex flex-col items-center text-center">
+            <Link to="/portfolio" className="h-full">
+              <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
+                <CardContent className="p-6 flex flex-col items-center text-center h-full justify-center">
                   <div className="h-16 w-16 rounded-full bg-warning/10 flex items-center justify-center mb-3">
                     <Lock className="h-8 w-8 text-warning" />
                   </div>
