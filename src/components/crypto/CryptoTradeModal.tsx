@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minus, Plus, Loader2, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Minus, Plus, Loader2, CheckCircle2, Clock, Copy, Wallet } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import { usePortfolio } from '@/hooks/usePortfolio';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CryptoTradeModalProps {
   crypto: Crypto | null;
@@ -23,7 +24,7 @@ interface CryptoTradeModalProps {
 }
 
 type TradeType = 'buy' | 'sell';
-type TradeStep = 'input' | 'processing' | 'verifying' | 'waiting' | 'complete';
+type TradeStep = 'input' | 'processing' | 'verifying' | 'waiting' | 'wallet_info' | 'complete';
 
 const FEE_RATE = 0.0015; // 0.15% trading fee for crypto
 
@@ -32,6 +33,8 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
   const [quantity, setQuantity] = useState('1');
   const [step, setStep] = useState<TradeStep>('input');
   const [processingTime, setProcessingTime] = useState(0);
+  const [userWallet, setUserWallet] = useState<string | null>(null);
+  const [adminWallet, setAdminWallet] = useState<string | null>(null);
   const { portfolio, executeTrade } = usePortfolio();
   const { profile, updateBalance } = useProfile();
   const { toast } = useToast();
@@ -44,6 +47,48 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
       return () => clearInterval(interval);
     }
   }, [step]);
+
+  // Fetch user and admin wallet addresses when buying
+  useEffect(() => {
+    if (open && crypto) {
+      fetchWallets();
+    }
+  }, [open, crypto]);
+
+  const fetchWallets = async () => {
+    if (!crypto) return;
+    
+    // Determine which crypto type for wallet lookup
+    const cryptoType = crypto.symbol === 'BTC' ? 'btc' : 
+                       crypto.symbol === 'ETH' ? 'eth' : 
+                       ['USDT', 'USDC'].includes(crypto.symbol) ? 'usdt' : 'eth';
+    
+    // Fetch user's wallet for this crypto
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: walletData } = await supabase
+        .from('user_wallets')
+        .select('address')
+        .eq('user_id', user.id)
+        .eq('currency', cryptoType.toUpperCase())
+        .single();
+      
+      if (walletData) {
+        setUserWallet(walletData.address);
+      }
+    }
+
+    // Fetch admin deposit wallet
+    const { data: adminData } = await supabase
+      .from('admin_settings')
+      .select('setting_value')
+      .eq('setting_key', `deposit_${cryptoType}_address`)
+      .single();
+    
+    if (adminData) {
+      setAdminWallet(adminData.setting_value);
+    }
+  };
 
   if (!crypto) return null;
 
@@ -64,16 +109,26 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
     setQuantity(newVal.toString());
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied",
+      description: "Address copied to clipboard",
+    });
+  };
+
   const handleTrade = async () => {
     setProcessingTime(0);
     setStep('processing');
 
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Random processing time between 2-6 seconds
+    const processingDelay = Math.floor(Math.random() * 4000) + 2000;
+    await new Promise(resolve => setTimeout(resolve, processingDelay));
     setStep('verifying');
 
-    // Simulate verification delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Verification delay
+    const verifyDelay = Math.floor(Math.random() * 2000) + 1500;
+    await new Promise(resolve => setTimeout(resolve, verifyDelay));
     
     // Show waiting message if it takes longer
     setStep('waiting');
@@ -105,7 +160,12 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
       : (profile?.balance || 0) + grandTotal;
     await updateBalance(newBalance);
 
-    setStep('complete');
+    // For sell orders, show wallet info step
+    if (tradeType === 'sell' && userWallet) {
+      setStep('wallet_info');
+    } else {
+      setStep('complete');
+    }
   };
 
   const handleClose = () => {
@@ -177,6 +237,46 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
               )}
             </div>
 
+            {/* Show admin wallet for buying (where to send payment) */}
+            {tradeType === 'buy' && adminWallet && (
+              <div className="p-3 rounded-lg border bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-1">Send payment to:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-background p-2 rounded truncate">
+                    {adminWallet}
+                  </code>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => copyToClipboard(adminWallet)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Show user wallet for selling (where they'll receive) */}
+            {tradeType === 'sell' && userWallet && (
+              <div className="p-3 rounded-lg border bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-1">Proceeds will be sent to:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-background p-2 rounded truncate">
+                    {userWallet}
+                  </code>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => copyToClipboard(userWallet)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 rounded-lg border p-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -233,6 +333,35 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
                 <span className="text-sm">This may take a moment, please hold on...</span>
               </div>
             )}
+          </div>
+        )}
+
+        {step === 'wallet_info' && (
+          <div className="py-8 text-center space-y-4">
+            <Wallet className="h-16 w-16 mx-auto text-primary" />
+            <h3 className="text-xl font-semibold">Withdrawal Processing</h3>
+            <p className="text-sm text-muted-foreground">
+              Your {crypto.symbol} sale has been processed. Funds will be transferred to your wallet.
+            </p>
+            {userWallet && (
+              <div className="p-3 rounded-lg border bg-muted/50 text-left">
+                <p className="text-xs text-muted-foreground mb-1">Receiving Wallet:</p>
+                <code className="text-xs break-all">{userWallet}</code>
+              </div>
+            )}
+            <div className="rounded-lg border p-4 text-left space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Amount Sold</span>
+                <span>{numQuantity} {crypto.symbol}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">USD Value</span>
+                <span>${grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+            <Button className="w-full" onClick={() => setStep('complete')}>
+              Continue
+            </Button>
           </div>
         )}
 
