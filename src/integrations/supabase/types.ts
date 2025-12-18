@@ -215,6 +215,33 @@ export type Database = {
         }
         Relationships: []
       }
+      tamg_holdings: {
+        Row: {
+          average_price: number
+          created_at: string
+          id: string
+          shares: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_price?: number
+          created_at?: string
+          id?: string
+          shares?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_price?: number
+          created_at?: string
+          id?: string
+          shares?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           company_name: string
@@ -251,6 +278,45 @@ export type Database = {
           total_amount?: number
           trade_type?: Database["public"]["Enums"]["trade_type"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string | null
+          notes: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }
@@ -293,6 +359,45 @@ export type Database = {
           currency?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          crypto_type: string | null
+          id: string
+          method: string
+          status: string
+          updated_at: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          crypto_type?: string | null
+          id?: string
+          method: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          crypto_type?: string | null
+          id?: string
+          method?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }

@@ -1,14 +1,67 @@
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Sun, Moon, Monitor, Building2, Shield, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useTheme } from '@/hooks/useTheme';
 import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
-  const { profile } = useProfile();
+  const { profile, fetchProfile } = useProfile();
+  const { isAdmin, user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  const [bankDetails, setBankDetails] = useState({
+    bank_name: '',
+    bank_account_name: '',
+    bank_account_number: '',
+    bank_routing_number: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setBankDetails({
+        bank_name: profile.bank_name || '',
+        bank_account_name: profile.bank_account_name || '',
+        bank_account_number: profile.bank_account_number || '',
+        bank_routing_number: profile.bank_routing_number || ''
+      });
+    }
+  }, [profile]);
+
+  const handleSaveBankDetails = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        bank_name: bankDetails.bank_name,
+        bank_account_name: bankDetails.bank_account_name,
+        bank_account_number: bankDetails.bank_account_number,
+        bank_routing_number: bankDetails.bank_routing_number
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to save bank details', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Bank details saved' });
+      fetchProfile();
+    }
+
+    setSaving(false);
+  };
 
   return (
     <AppLayout>
@@ -19,6 +72,26 @@ export default function Settings() {
             Manage your account preferences
           </p>
         </div>
+
+        {/* Admin Panel Link (for mobile) */}
+        {isAdmin && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4">
+              <Link to="/admin" className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Admin Panel</p>
+                    <p className="text-sm text-muted-foreground">Manage users, KYC, and settings</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Theme Settings */}
         <Card>
@@ -78,6 +151,62 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Bank Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Bank Details
+            </CardTitle>
+            <CardDescription>
+              Add your bank details for withdrawals
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Bank Name</Label>
+                <Input
+                  placeholder="e.g. Chase, Bank of America"
+                  value={bankDetails.bank_name}
+                  onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Account Holder Name</Label>
+                <Input
+                  placeholder="Name on the account"
+                  value={bankDetails.bank_account_name}
+                  onChange={(e) => setBankDetails({ ...bankDetails, bank_account_name: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Account Number</Label>
+                <Input
+                  placeholder="Account number"
+                  value={bankDetails.bank_account_number}
+                  onChange={(e) => setBankDetails({ ...bankDetails, bank_account_number: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Routing Number</Label>
+                <Input
+                  placeholder="Routing number"
+                  value={bankDetails.bank_routing_number}
+                  onChange={(e) => setBankDetails({ ...bankDetails, bank_routing_number: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <Button onClick={handleSaveBankDetails} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Bank Details'}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Account Info */}
         <Card>
           <CardHeader>
@@ -94,6 +223,10 @@ export default function Settings() {
             <div className="flex justify-between items-center py-2 border-b border-border">
               <span className="text-sm text-muted-foreground">Full Name</span>
               <span className="text-sm font-medium text-foreground">{profile?.full_name || 'Not set'}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-sm text-muted-foreground">Wallet ID</span>
+              <span className="text-sm font-medium text-foreground font-mono">{profile?.wallet_id || 'N/A'}</span>
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="text-sm text-muted-foreground">Balance</span>

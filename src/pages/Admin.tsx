@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus } from 'lucide-react';
+import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,18 @@ interface UserProfile {
   created_at: string;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  user_id: string;
+  amount: number;
+  method: string;
+  crypto_type: string | null;
+  wallet_address: string | null;
+  status: string;
+  created_at: string;
+  profiles?: { email: string; full_name: string | null; wallet_id: string | null } | null;
+}
+
 interface Stats {
   total: number;
   pending: number;
@@ -66,11 +78,13 @@ interface AdminSettings {
   deposit_btc_address: string;
   deposit_eth_address: string;
   deposit_usdt_address: string;
+  tamg_share_price: string;
 }
 
 export default function Admin() {
   const [kycRequests, setKycRequests] = useState<KYCRequestWithProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [selectedKYC, setSelectedKYC] = useState<KYCRequestWithProfile | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -90,6 +104,7 @@ export default function Admin() {
     deposit_btc_address: '',
     deposit_eth_address: '',
     deposit_usdt_address: '',
+    tamg_share_price: '25.00',
   });
   const { toast } = useToast();
 
@@ -97,6 +112,7 @@ export default function Admin() {
     fetchData();
     fetchUsers();
     fetchAdminSettings();
+    fetchWithdrawals();
   }, []);
 
   const fetchData = async () => {
@@ -132,6 +148,20 @@ export default function Admin() {
     }
   };
 
+  const fetchWithdrawals = async () => {
+    const { data, error } = await supabase
+      .from('withdrawal_requests')
+      .select(`
+        *,
+        profiles:user_id (email, full_name, wallet_id)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setWithdrawals(data as unknown as WithdrawalRequest[]);
+    }
+  };
+
   const fetchAdminSettings = async () => {
     const { data, error } = await supabase
       .from('admin_settings')
@@ -142,7 +172,7 @@ export default function Admin() {
       data.forEach((item: { setting_key: string; setting_value: string }) => {
         settings[item.setting_key as keyof AdminSettings] = item.setting_value;
       });
-      setAdminSettings(settings as AdminSettings);
+      setAdminSettings(prev => ({ ...prev, ...settings }));
     }
   };
 
@@ -228,6 +258,20 @@ export default function Admin() {
     }
   };
 
+  const handleWithdrawalAction = async (id: string, status: 'approved' | 'declined' | 'completed') => {
+    const { error } = await supabase
+      .from('withdrawal_requests')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: `Withdrawal ${status}` });
+      fetchWithdrawals();
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
     user.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -235,6 +279,7 @@ export default function Admin() {
   );
 
   const pendingRequests = kycRequests.filter(k => k.status === 'pending');
+  const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending');
 
   return (
     <AppLayout>
@@ -247,18 +292,27 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="kyc" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="kyc" className="gap-2">
               <FileCheck className="h-4 w-4" />
-              KYC Management
+              <span className="hidden sm:inline">KYC</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
-              User Management
+              <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="withdrawals" className="gap-2">
+              <ArrowDownToLine className="h-4 w-4" />
+              <span className="hidden sm:inline">Withdrawals</span>
+              {pendingWithdrawals.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {pendingWithdrawals.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings2 className="h-4 w-4" />
-              Deposit Settings
+              <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
           </TabsList>
 
@@ -340,7 +394,7 @@ export default function Admin() {
                             size="sm" 
                             onClick={() => { setSelectedKYC(kyc); setShowKYCDetailsDialog(true); }}
                           >
-                            <Eye className="h-3 w-3 mr-1" /> View Details
+                            <Eye className="h-3 w-3 mr-1" /> View
                           </Button>
                           <Button size="sm" className="bg-success hover:bg-success/90" onClick={() => handleApprove(kyc.id)}>
                             Approve
@@ -449,8 +503,135 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          {/* Withdrawals Tab */}
+          <TabsContent value="withdrawals" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Withdrawals</CardTitle>
+                <CardDescription>Review and process withdrawal requests</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingWithdrawals.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No pending withdrawals</p>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingWithdrawals.map((withdrawal) => (
+                      <div key={withdrawal.id} className="p-4 rounded-lg border">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {withdrawal.profiles?.full_name || withdrawal.profiles?.email}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{withdrawal.profiles?.email}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline">{withdrawal.method.toUpperCase()}</Badge>
+                              {withdrawal.crypto_type && (
+                                <Badge variant="secondary">{withdrawal.crypto_type.toUpperCase()}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Wallet ID: {withdrawal.profiles?.wallet_id || 'N/A'}
+                            </p>
+                            {withdrawal.wallet_address && (
+                              <p className="text-xs font-mono text-muted-foreground mt-1 break-all">
+                                To: {withdrawal.wallet_address}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-foreground">
+                              ${withdrawal.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(withdrawal.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <Button 
+                            size="sm" 
+                            className="bg-success hover:bg-success/90"
+                            onClick={() => handleWithdrawalAction(withdrawal.id, 'completed')}
+                          >
+                            Mark Completed
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleWithdrawalAction(withdrawal.id, 'declined')}
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>All Withdrawal Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {withdrawals.map((withdrawal) => (
+                    <div key={withdrawal.id} className="flex items-center justify-between p-3 rounded-lg border">
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {withdrawal.profiles?.full_name || withdrawal.profiles?.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ${withdrawal.amount.toFixed(2)} via {withdrawal.method}
+                          {withdrawal.crypto_type && ` (${withdrawal.crypto_type.toUpperCase()})`}
+                        </p>
+                      </div>
+                      <Badge className={cn(
+                        withdrawal.status === 'completed' && 'bg-success/10 text-success',
+                        withdrawal.status === 'pending' && 'bg-warning/10 text-warning',
+                        withdrawal.status === 'declined' && 'bg-destructive/10 text-destructive',
+                        withdrawal.status === 'approved' && 'bg-primary/10 text-primary'
+                      )}>
+                        {withdrawal.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            {/* TAMG Share Price */}
+            <Card className="border-primary/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  TAMG Share Price
+                </CardTitle>
+                <CardDescription>Set the current price per TAMIC GROUP share</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={adminSettings.tamg_share_price}
+                      onChange={(e) => setAdminSettings({ ...adminSettings, tamg_share_price: e.target.value })}
+                      className="pl-7"
+                    />
+                  </div>
+                  <Button onClick={() => updateAdminSetting('tamg_share_price', adminSettings.tamg_share_price)}>
+                    Update Price
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Bank Deposit Settings</CardTitle>
@@ -518,7 +699,7 @@ export default function Admin() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground">ETH Address</label>
+                  <label className="text-sm font-medium text-foreground">ETH Address (ERC20)</label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       value={adminSettings.deposit_eth_address}
@@ -529,7 +710,7 @@ export default function Admin() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-foreground">USDT Address (TRC-20)</label>
+                  <label className="text-sm font-medium text-foreground">USDT Address (TRC20)</label>
                   <div className="flex gap-2 mt-1">
                     <Input
                       value={adminSettings.deposit_usdt_address}
