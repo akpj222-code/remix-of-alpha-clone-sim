@@ -145,7 +145,7 @@ export default function Landing() {
               <span className="font-semibold text-foreground">TAMIC GROUP</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} TAMIC GROUP. Investment simulation platform.
+              © {new Date().getFullYear()} TAMIC GROUP. Investment platform.
             </p>
           </div>
         </div>
