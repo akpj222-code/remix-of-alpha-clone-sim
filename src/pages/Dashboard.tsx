@@ -66,6 +66,29 @@ export default function Dashboard() {
     }
   };
 
+  const getDisplayLabel = () => {
+    switch (positionView) {
+      case 'net-worth':
+        return 'Total Net Worth';
+      case 'investment':
+        return 'Investment Value';
+      case 'currency':
+        return 'Total by Currency';
+      default:
+        return 'Total Net Worth';
+    }
+  };
+
+  // Get current view index for pagination
+  const getViewIndex = () => {
+    switch (positionView) {
+      case 'net-worth': return 0;
+      case 'investment': return 1;
+      case 'currency': return 2;
+      default: return 0;
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in pb-8">
@@ -119,7 +142,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {positionView === 'net-worth' ? 'Total Net Worth' : positionView === 'investment' ? 'Investment Value' : 'Total by Currency'}
+                    {getDisplayLabel()}
                   </span>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -136,11 +159,20 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Carousel Indicator */}
+          {/* Carousel Indicator - Now synced with positionView */}
           <div className="flex justify-center mt-4 gap-1">
-            <div className="w-6 h-1.5 rounded-full bg-primary"></div>
-            <div className="w-1.5 h-1.5 rounded-full bg-muted"></div>
-            <div className="w-1.5 h-1.5 rounded-full bg-muted"></div>
+            <div className={cn(
+              "h-1.5 rounded-full transition-all",
+              getViewIndex() === 0 ? "w-6 bg-primary" : "w-1.5 bg-muted"
+            )}></div>
+            <div className={cn(
+              "h-1.5 rounded-full transition-all",
+              getViewIndex() === 1 ? "w-6 bg-primary" : "w-1.5 bg-muted"
+            )}></div>
+            <div className={cn(
+              "h-1.5 rounded-full transition-all",
+              getViewIndex() === 2 ? "w-6 bg-primary" : "w-1.5 bg-muted"
+            )}></div>
           </div>
         </div>
 
@@ -154,22 +186,22 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-4">
             <Link to="/stocks" className="h-full">
               <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardContent className="p-6 flex flex-col items-center text-center h-full justify-center">
-                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                    <Shield className="h-8 w-8 text-primary" />
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center h-full justify-center">
+                  <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                    <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                   </div>
-                  <span className="text-sm font-medium text-foreground">Securities Trading</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">Securities Trading</span>
                 </CardContent>
               </Card>
             </Link>
 
             <Link to="/portfolio" className="h-full">
               <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardContent className="p-6 flex flex-col items-center text-center h-full justify-center">
-                  <div className="h-16 w-16 rounded-full bg-warning/10 flex items-center justify-center mb-3">
-                    <Lock className="h-8 w-8 text-warning" />
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center h-full justify-center">
+                  <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-warning/10 flex items-center justify-center mb-3">
+                    <Lock className="h-6 w-6 sm:h-8 sm:w-8 text-warning" />
                   </div>
-                  <span className="text-sm font-medium text-foreground">Asset Management</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">Asset Management</span>
                 </CardContent>
               </Card>
             </Link>
@@ -198,33 +230,33 @@ export default function Dashboard() {
           {investmentsExpanded && (
             <>
               {/* Currency Tabs - Only USD and GBP */}
-              <div className="flex items-center gap-4 mb-4 border-b border-border pb-2">
+              <div className="flex items-center gap-4 mb-4 border-b border-border pb-2 overflow-x-auto">
                 <button
                   onClick={() => setSelectedCurrency('USD')}
                   className={cn(
-                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
+                    "flex items-center gap-2 pb-2 border-b-2 transition-colors flex-shrink-0",
                     selectedCurrency === 'USD' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
                   )}
                 >
                   <DollarSign className="h-4 w-4" />
                   <span className="text-sm font-medium">USD</span>
                 </button>
-                <div className="h-4 w-px bg-border"></div>
+                <div className="h-4 w-px bg-border flex-shrink-0"></div>
                 <button
                   onClick={() => setSelectedCurrency('GBP')}
                   className={cn(
-                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
+                    "flex items-center gap-2 pb-2 border-b-2 transition-colors flex-shrink-0",
                     selectedCurrency === 'GBP' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
                   )}
                 >
                   <PoundSterling className="h-4 w-4" />
                   <span className="text-sm font-medium">GBP</span>
                 </button>
-                <div className="h-4 w-px bg-border"></div>
+                <div className="h-4 w-px bg-border flex-shrink-0"></div>
                 <button
                   onClick={() => setSelectedCurrency('EUR')}
                   className={cn(
-                    "flex items-center gap-2 pb-2 border-b-2 transition-colors",
+                    "flex items-center gap-2 pb-2 border-b-2 transition-colors flex-shrink-0",
                     selectedCurrency === 'EUR' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'
                   )}
                 >
@@ -235,8 +267,8 @@ export default function Dashboard() {
 
               {/* Investment Value Display */}
               <Card className="bg-card border shadow-sm">
-                <CardContent className="p-6">
-                  <p className="text-center text-2xl font-bold text-foreground mb-4">
+                <CardContent className="p-4 sm:p-6">
+                  <p className="text-center text-xl sm:text-2xl font-bold text-foreground mb-4">
                     {formatCurrency(totalNetWorth, selectedCurrency)}
                   </p>
                   
@@ -249,8 +281,8 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                    <span>Portfolio: {formatCurrency(portfolioValue, selectedCurrency)}</span>
-                    <span>Cash: {formatCurrency(profile?.balance || 0, selectedCurrency)}</span>
+                    <span className="truncate">Portfolio: {formatCurrency(portfolioValue, selectedCurrency)}</span>
+                    <span className="truncate ml-2">Cash: {formatCurrency(profile?.balance || 0, selectedCurrency)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -260,15 +292,15 @@ export default function Dashboard() {
                 <Card className="mt-4 bg-warning/5 border-warning/20">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center flex-shrink-0">
                         <Shield className="h-5 w-5 text-warning" />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">Complete KYC Verification</p>
                         <p className="text-xs text-muted-foreground">Unlock all trading features</p>
                       </div>
                       <Link to="/kyc">
-                        <Button size="sm" variant="outline" className="border-warning text-warning hover:bg-warning/10">
+                        <Button size="sm" variant="outline" className="border-warning text-warning hover:bg-warning/10 flex-shrink-0">
                           Start
                         </Button>
                       </Link>

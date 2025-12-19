@@ -10,6 +10,18 @@ import { useCrypto, Crypto } from '@/hooks/useCrypto';
 import { getCryptoMarketStatus } from '@/lib/marketHours';
 import { cn } from '@/lib/utils';
 
+// Custom ETH Diamond Icon
+const EthDiamondIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 417" className={className} fill="currentColor">
+    <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" opacity="0.6"/>
+    <path d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
+    <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.601L256 236.587z" opacity="0.6"/>
+    <path d="M127.962 416.905v-104.72L0 236.585z"/>
+    <path d="M127.961 287.958l127.96-75.637-127.96-58.162z" opacity="0.2"/>
+    <path d="M0 212.32l127.96 75.638v-133.8z" opacity="0.6"/>
+  </svg>
+);
+
 const categories = ['All', 'Layer 1', 'DeFi', 'Stablecoins', 'Meme', 'Gaming'];
 
 const CATEGORY_MAP: Record<string, string[]> = {
@@ -25,6 +37,17 @@ function getCryptoCategory(symbol: string): string {
     if (symbols.includes(symbol)) return category;
   }
   return 'Other';
+}
+
+function getCryptoIcon(symbol: string) {
+  if (symbol === 'ETH') {
+    return <EthDiamondIcon className="h-5 w-5 text-blue-500" />;
+  }
+  return (
+    <span className="text-sm font-bold text-primary">
+      {symbol.slice(0, 2)}
+    </span>
+  );
 }
 
 export default function CryptoPage() {
@@ -81,7 +104,7 @@ export default function CryptoPage() {
               Trade top cryptocurrencies 24/7
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="outline" className="bg-success/10 text-success border-success/20">
               {marketStatus.message}
             </Badge>
@@ -114,7 +137,7 @@ export default function CryptoPage() {
               <Badge
                 key={cat}
                 variant={category === cat ? 'default' : 'outline'}
-                className="cursor-pointer whitespace-nowrap"
+                className="cursor-pointer whitespace-nowrap flex-shrink-0"
                 onClick={() => setCategory(cat)}
               >
                 {cat}
@@ -132,34 +155,32 @@ export default function CryptoPage() {
               onClick={() => handleTrade(crypto)}
             >
               <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">
-                        {crypto.symbol.slice(0, 2)}
-                      </span>
+                <div className="flex items-start justify-between mb-3 gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      {getCryptoIcon(crypto.symbol)}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-semibold text-foreground">{crypto.symbol}</h3>
-                      <p className="text-xs text-muted-foreground">{crypto.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{crypto.name}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs flex-shrink-0">
                     {getCryptoCategory(crypto.symbol)}
                   </Badge>
                 </div>
 
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xl font-bold text-foreground">
+                <div className="flex items-end justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-lg sm:text-xl font-bold text-foreground truncate">
                       {formatPrice(crypto.price)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
                       Vol: {formatVolume(crypto.volume)}
                     </p>
                   </div>
                   <div className={cn(
-                    "flex items-center gap-1",
+                    "flex items-center gap-1 flex-shrink-0",
                     crypto.changePercent >= 0 ? "text-success" : "text-destructive"
                   )}>
                     {crypto.changePercent >= 0 ? (

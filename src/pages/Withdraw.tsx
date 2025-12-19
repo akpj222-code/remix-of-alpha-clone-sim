@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownToLine, Building2, Bitcoin, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowDownToLine, Building2, Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,19 @@ import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'react-router-dom';
+
+// Custom ETH Diamond Icon
+const EthDiamondIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 417" className={className} fill="currentColor">
+    <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" opacity="0.6"/>
+    <path d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
+    <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.601L256 236.587z" opacity="0.6"/>
+    <path d="M127.962 416.905v-104.72L0 236.585z"/>
+    <path d="M127.961 287.958l127.96-75.637-127.96-58.162z" opacity="0.2"/>
+    <path d="M0 212.32l127.96 75.638v-133.8z" opacity="0.6"/>
+  </svg>
+);
 
 type WithdrawMethod = 'bank' | 'crypto';
 type CryptoType = 'btc' | 'eth' | 'usdt';
@@ -22,10 +35,17 @@ interface BankDetails {
   bank_routing_number: string | null;
 }
 
+interface UserWallet {
+  id: string;
+  currency: string;
+  address: string;
+}
+
 export default function WithdrawPage() {
   const { profile, updateBalance, fetchProfile } = useProfile();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   
   const [step, setStep] = useState<WithdrawStep>('select');
   const [method, setMethod] = useState<WithdrawMethod>('bank');
@@ -34,13 +54,25 @@ export default function WithdrawPage() {
   const [walletAddress, setWalletAddress] = useState('');
   const [useStoredWallet, setUseStoredWallet] = useState(false);
   const [result, setResult] = useState<'success' | 'declined'>('success');
-  const [userWallets, setUserWallets] = useState<{currency: string, address: string}[]>([]);
-  const [adminWallets, setAdminWallets] = useState<{btc: string, eth: string, usdt: string}>({btc: '', eth: '', usdt: ''});
+  const [userWallets, setUserWallets] = useState<UserWallet[]>([]);
+
+  // Check URL params for pre-selected crypto
+  useEffect(() => {
+    const crypto = searchParams.get('crypto');
+    const fromTamic = searchParams.get('fromTamic');
+    
+    if (crypto && ['btc', 'eth', 'usdt'].includes(crypto.toLowerCase())) {
+      setMethod('crypto');
+      setCryptoType(crypto.toLowerCase() as CryptoType);
+      if (fromTamic === 'true') {
+        setUseStoredWallet(true);
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) {
       fetchUserWallets();
-      fetchAdminWallets();
     }
   }, [user]);
 
@@ -48,26 +80,9 @@ export default function WithdrawPage() {
     if (!user) return;
     const { data } = await supabase
       .from('user_wallets')
-      .select('currency, address')
+      .select('id, currency, address')
       .eq('user_id', user.id);
     if (data) setUserWallets(data);
-  };
-
-  const fetchAdminWallets = async () => {
-    const { data } = await supabase
-      .from('admin_settings')
-      .select('setting_key, setting_value')
-      .in('setting_key', ['deposit_btc_address', 'deposit_eth_address', 'deposit_usdt_address']);
-    
-    if (data) {
-      const wallets = { btc: '', eth: '', usdt: '' };
-      data.forEach(item => {
-        if (item.setting_key === 'deposit_btc_address') wallets.btc = item.setting_value;
-        if (item.setting_key === 'deposit_eth_address') wallets.eth = item.setting_value;
-        if (item.setting_key === 'deposit_usdt_address') wallets.usdt = item.setting_value;
-      });
-      setAdminWallets(wallets);
-    }
   };
 
   const bankDetails: BankDetails = {
@@ -128,11 +143,13 @@ export default function WithdrawPage() {
       return;
     }
 
-    // Create withdrawal request
-    const finalWalletAddress = useStoredWallet 
-      ? userWallets.find(w => w.currency === cryptoType.toUpperCase())?.address 
+    // Get wallet address
+    const userWallet = getUserWallet(cryptoType);
+    const finalWalletAddress = useStoredWallet && userWallet
+      ? userWallet.address
       : walletAddress;
 
+    // Create withdrawal request
     const { error: withdrawError } = await supabase
       .from('withdrawal_requests')
       .insert({
@@ -140,11 +157,13 @@ export default function WithdrawPage() {
         amount: withdrawAmount,
         method,
         crypto_type: method === 'crypto' ? cryptoType : null,
-        wallet_address: finalWalletAddress,
-        status: 'pending'
+        wallet_address: method === 'crypto' ? finalWalletAddress : null,
+        status: 'pending',
+        from_tamic_wallet: useStoredWallet
       });
 
     if (withdrawError) {
+      console.error('Withdrawal error:', withdrawError);
       toast({ title: 'Error', description: 'Failed to process withdrawal', variant: 'destructive' });
       setStep('details');
       return;
@@ -159,24 +178,18 @@ export default function WithdrawPage() {
         method: method === 'crypto' ? cryptoType : 'bank',
         amount: withdrawAmount,
         status: 'pending',
-        wallet_address: finalWalletAddress,
-        notes: method === 'bank' ? `Bank: ${bankDetails.bank_name}` : `${cryptoType.toUpperCase()} withdrawal`
+        wallet_address: method === 'crypto' ? finalWalletAddress : null,
+        notes: method === 'bank' 
+          ? `Bank: ${bankDetails.bank_name}` 
+          : `${cryptoType.toUpperCase()} withdrawal${useStoredWallet ? ' from TAMIC wallet' : ''}`
       });
 
-    // Deduct balance
+    // Deduct balance from main account
     await updateBalance((profile?.balance || 0) - withdrawAmount);
-
-    // If using TAMIC stored wallet, auto-credit after delay
-    if (method === 'crypto' && useStoredWallet) {
-      setTimeout(async () => {
-        // This would be handled by admin in real scenario
-        // Just log for now - admin will manually process
-      }, 180000); // 3 minutes
-    }
 
     setResult('success');
     setStep('result');
-    fetchProfile();
+    await fetchProfile();
   };
 
   const resetForm = () => {
@@ -186,7 +199,9 @@ export default function WithdrawPage() {
     setUseStoredWallet(false);
   };
 
-  const getUserWallet = (type: string) => userWallets.find(w => w.currency === type.toUpperCase());
+  const getUserWallet = (type: string): UserWallet | undefined => {
+    return userWallets.find(w => w.currency.toLowerCase() === type.toLowerCase());
+  };
 
   return (
     <AppLayout>
@@ -200,9 +215,9 @@ export default function WithdrawPage() {
 
         {/* Balance Card */}
         <Card className="border-primary/20">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <p className="text-sm text-muted-foreground">Available Balance</p>
-            <p className="text-3xl font-bold text-foreground">
+            <p className="text-2xl sm:text-3xl font-bold text-foreground">
               ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
           </CardContent>
@@ -225,8 +240,8 @@ export default function WithdrawPage() {
                   onClick={() => setMethod('bank')}
                 >
                   <RadioGroupItem value="bank" id="bank" />
-                  <Building2 className="h-8 w-8 text-muted-foreground" />
-                  <div className="flex-1">
+                  <Building2 className="h-8 w-8 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <Label htmlFor="bank" className="text-base font-medium cursor-pointer">Bank Transfer</Label>
                     <p className="text-sm text-muted-foreground">Withdraw to your bank account</p>
                     {!hasBankDetails && (
@@ -240,8 +255,8 @@ export default function WithdrawPage() {
                   onClick={() => setMethod('crypto')}
                 >
                   <RadioGroupItem value="crypto" id="crypto" />
-                  <Bitcoin className="h-8 w-8 text-muted-foreground" />
-                  <div className="flex-1">
+                  <span className="text-2xl">₿</span>
+                  <div className="flex-1 min-w-0">
                     <Label htmlFor="crypto" className="text-base font-medium cursor-pointer">Cryptocurrency</Label>
                     <p className="text-sm text-muted-foreground">Withdraw to crypto wallet</p>
                   </div>
@@ -285,7 +300,7 @@ export default function WithdrawPage() {
                           onClick={() => setCryptoType('btc')}
                         >
                           <RadioGroupItem value="btc" id="btc" className="sr-only" />
-                          <span className="text-2xl">₿</span>
+                          <span className="text-2xl text-orange-500">₿</span>
                           <span className="text-xs mt-1">BTC</span>
                         </div>
                         <div 
@@ -293,7 +308,7 @@ export default function WithdrawPage() {
                           onClick={() => setCryptoType('eth')}
                         >
                           <RadioGroupItem value="eth" id="eth" className="sr-only" />
-                          <span className="text-2xl">Ξ</span>
+                          <EthDiamondIcon className="h-6 w-6 text-blue-500" />
                           <span className="text-xs mt-1">ETH (ERC20)</span>
                         </div>
                         <div 
@@ -301,7 +316,7 @@ export default function WithdrawPage() {
                           onClick={() => setCryptoType('usdt')}
                         >
                           <RadioGroupItem value="usdt" id="usdt" className="sr-only" />
-                          <span className="text-2xl">₮</span>
+                          <span className="text-2xl text-green-500">₮</span>
                           <span className="text-xs mt-1">USDT (TRC20)</span>
                         </div>
                       </div>
@@ -309,26 +324,38 @@ export default function WithdrawPage() {
                   </div>
 
                   {getUserWallet(cryptoType) && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="useStored"
-                        checked={useStoredWallet}
-                        onChange={(e) => {
-                          setUseStoredWallet(e.target.checked);
-                          if (e.target.checked) setWalletAddress('');
-                        }}
-                        className="rounded border-border"
-                      />
-                      <Label htmlFor="useStored" className="text-sm cursor-pointer">
-                        Use my TAMIC {cryptoType.toUpperCase()} wallet
-                      </Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="useStored"
+                          checked={useStoredWallet}
+                          onChange={(e) => {
+                            setUseStoredWallet(e.target.checked);
+                            if (e.target.checked) {
+                              setWalletAddress('');
+                            }
+                          }}
+                          className="rounded border-border"
+                        />
+                        <Label htmlFor="useStored" className="text-sm cursor-pointer">
+                          Use my TAMIC {cryptoType.toUpperCase()} wallet address
+                        </Label>
+                      </div>
+                      {useStoredWallet && (
+                        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1">Withdrawal Address:</p>
+                          <p className="font-mono text-xs text-foreground break-all">
+                            {getUserWallet(cryptoType)?.address}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   {!useStoredWallet && (
                     <div>
-                      <Label>Wallet Address</Label>
+                      <Label>Destination Wallet Address</Label>
                       <Input
                         placeholder={`Enter your ${cryptoType.toUpperCase()} wallet address`}
                         value={walletAddress}
@@ -369,10 +396,10 @@ export default function WithdrawPage() {
         {/* Step: Processing */}
         {step === 'processing' && (
           <Card>
-            <CardContent className="p-12 flex flex-col items-center justify-center">
+            <CardContent className="p-8 sm:p-12 flex flex-col items-center justify-center">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-lg font-medium text-foreground">Processing Withdrawal</p>
-              <p className="text-sm text-muted-foreground">Please wait while we process your request...</p>
+              <p className="text-sm text-muted-foreground text-center">Please wait while we process your request...</p>
             </CardContent>
           </Card>
         )}
@@ -380,7 +407,7 @@ export default function WithdrawPage() {
         {/* Step: Result */}
         {step === 'result' && (
           <Card>
-            <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+            <CardContent className="p-6 sm:p-8 flex flex-col items-center justify-center text-center">
               {result === 'success' ? (
                 <>
                   <CheckCircle2 className="h-16 w-16 text-success mb-4" />

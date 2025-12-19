@@ -81,13 +81,13 @@ export default function Stocks() {
               Browse and trade any US stock
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Badge variant={marketStatus.isOpen ? 'default' : 'secondary'} className="gap-1">
               <span className={cn(
                 "w-2 h-2 rounded-full",
                 marketStatus.isOpen ? "bg-success animate-pulse" : "bg-muted-foreground"
               )} />
-              {marketStatus.status}
+              <span className="truncate max-w-[100px] sm:max-w-none">{marketStatus.status}</span>
             </Badge>
             <Button
               variant="outline"
@@ -97,7 +97,7 @@ export default function Stocks() {
               className="gap-2"
             >
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function Stocks() {
               <Badge
                 key={cat}
                 variant={category === cat ? 'default' : 'outline'}
-                className="cursor-pointer whitespace-nowrap"
+                className="cursor-pointer whitespace-nowrap flex-shrink-0"
                 onClick={() => setCategory(cat)}
               >
                 {cat}
@@ -134,23 +134,25 @@ export default function Stocks() {
         {searchedStock && (
           <div className="p-4 rounded-lg border bg-card">
             <p className="text-sm text-muted-foreground mb-2">Found stock by symbol:</p>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="min-w-0">
                 <p className="font-semibold text-lg">{searchedStock.symbol}</p>
-                <p className="text-sm text-muted-foreground">{searchedStock.name}</p>
+                <p className="text-sm text-muted-foreground truncate">{searchedStock.name}</p>
               </div>
-              <div className="text-right mr-4">
-                <p className="font-semibold text-lg">${searchedStock.price.toFixed(2)}</p>
-                <p className={cn(
-                  "text-sm",
-                  searchedStock.change >= 0 ? "text-success" : "text-destructive"
-                )}>
-                  {searchedStock.change >= 0 ? '+' : ''}{searchedStock.change.toFixed(2)} ({searchedStock.changePercent.toFixed(2)}%)
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="font-semibold text-lg">${searchedStock.price.toFixed(2)}</p>
+                  <p className={cn(
+                    "text-sm",
+                    searchedStock.change >= 0 ? "text-success" : "text-destructive"
+                  )}>
+                    {searchedStock.change >= 0 ? '+' : ''}{searchedStock.change.toFixed(2)} ({searchedStock.changePercent.toFixed(2)}%)
+                  </p>
+                </div>
+                <Button onClick={handleSearchStockTrade}>
+                  Trade
+                </Button>
               </div>
-              <Button onClick={handleSearchStockTrade}>
-                Trade
-              </Button>
             </div>
           </div>
         )}

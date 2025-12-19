@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Wallet, Building2, Bitcoin, Copy, Check, Loader2 } from 'lucide-react';
+import { Wallet, Building2, Copy, Check, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,7 +7,18 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+
+// Custom ETH Diamond Icon
+const EthDiamondIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 256 417" className={className} fill="currentColor">
+    <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" opacity="0.6"/>
+    <path d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
+    <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.601L256 236.587z" opacity="0.6"/>
+    <path d="M127.962 416.905v-104.72L0 236.585z"/>
+    <path d="M127.961 287.958l127.96-75.637-127.96-58.162z" opacity="0.2"/>
+    <path d="M0 212.32l127.96 75.638v-133.8z" opacity="0.6"/>
+  </svg>
+);
 
 type DepositMethod = 'bank' | 'crypto';
 type CryptoType = 'BTC' | 'ETH' | 'USDT';
@@ -17,9 +28,9 @@ interface DepositDetails {
   bankAccount?: string;
   bankRouting?: string;
   bankAccountName?: string;
-  btcAddress?: string;
-  ethAddress?: string;
-  usdtAddress?: string;
+  btcAddresses?: string[];
+  ethAddresses?: string[];
+  usdtAddresses?: string[];
 }
 
 export default function Deposit() {
@@ -30,6 +41,7 @@ export default function Deposit() {
   const [loading, setLoading] = useState(false);
   const [depositDetails, setDepositDetails] = useState<DepositDetails | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<string>('');
 
   const getRandomLoadTime = () => {
     const times = [2000, 3000, 4000, 5000, 7000, 10000];
@@ -39,6 +51,7 @@ export default function Deposit() {
   const fetchDepositDetails = async () => {
     setLoading(true);
     setDepositDetails(null);
+    setSelectedAddress('');
     
     const loadTime = getRandomLoadTime();
     
@@ -64,26 +77,51 @@ export default function Deposit() {
           case 'deposit_bank_account_name':
             settings.bankAccountName = item.setting_value;
             break;
-          case 'deposit_btc_address':
-            settings.btcAddress = item.setting_value;
+          case 'deposit_btc_addresses':
+            try { settings.btcAddresses = JSON.parse(item.setting_value); } catch { settings.btcAddresses = []; }
             break;
-          case 'deposit_eth_address':
-            settings.ethAddress = item.setting_value;
+          case 'deposit_eth_addresses':
+            try { settings.ethAddresses = JSON.parse(item.setting_value); } catch { settings.ethAddresses = []; }
             break;
-          case 'deposit_usdt_address':
-            settings.usdtAddress = item.setting_value;
+          case 'deposit_usdt_addresses':
+            try { settings.usdtAddresses = JSON.parse(item.setting_value); } catch { settings.usdtAddresses = []; }
             break;
         }
       });
       setDepositDetails(settings);
+      
+      // Select random address for current crypto
+      selectRandomAddress(settings, selectedCrypto);
     }
     
     setLoading(false);
   };
 
+  const selectRandomAddress = (details: DepositDetails, crypto: CryptoType) => {
+    let addresses: string[] = [];
+    switch (crypto) {
+      case 'BTC': addresses = details.btcAddresses || []; break;
+      case 'ETH': addresses = details.ethAddresses || []; break;
+      case 'USDT': addresses = details.usdtAddresses || []; break;
+    }
+    
+    if (addresses.length > 0) {
+      const randomIndex = Math.floor(Math.random() * addresses.length);
+      setSelectedAddress(addresses[randomIndex]);
+    } else {
+      setSelectedAddress('');
+    }
+  };
+
   useEffect(() => {
     fetchDepositDetails();
   }, [method]);
+
+  useEffect(() => {
+    if (depositDetails) {
+      selectRandomAddress(depositDetails, selectedCrypto);
+    }
+  }, [selectedCrypto]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -92,13 +130,11 @@ export default function Deposit() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const hasBankDetails = profile?.bank_name && profile?.bank_account_number;
-
   const CopyButton = ({ text, label }: { text: string; label: string }) => (
     <Button
       variant="ghost"
       size="icon"
-      className="h-8 w-8"
+      className="h-8 w-8 flex-shrink-0"
       onClick={() => copyToClipboard(text, label)}
     >
       {copied === label ? (
@@ -109,20 +145,11 @@ export default function Deposit() {
     </Button>
   );
 
-  const cryptoIcons: Record<CryptoType, string> = {
-    BTC: '₿',
-    ETH: 'Ξ',
-    USDT: '₮',
-  };
-
-  const getCryptoAddress = (crypto: CryptoType) => {
-    if (!depositDetails) return '';
-    switch (crypto) {
-      case 'BTC': return depositDetails.btcAddress || '';
-      case 'ETH': return depositDetails.ethAddress || '';
-      case 'USDT': return depositDetails.usdtAddress || '';
-    }
-  };
+  const cryptoOptions: { code: CryptoType; name: string; icon: React.ReactNode }[] = [
+    { code: 'BTC', name: 'Bitcoin', icon: <span className="text-lg text-orange-500">₿</span> },
+    { code: 'ETH', name: 'Ethereum', icon: <EthDiamondIcon className="h-5 w-5 text-blue-500" /> },
+    { code: 'USDT', name: 'Tether', icon: <span className="text-lg text-green-500">₮</span> },
+  ];
 
   return (
     <AppLayout>
@@ -136,14 +163,14 @@ export default function Deposit() {
 
         {/* Current Balance */}
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Wallet className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Current Balance</p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
                   ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -155,10 +182,10 @@ export default function Deposit() {
         {profile?.wallet_id && (
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-muted-foreground">Your Wallet ID</p>
-                  <p className="font-mono font-semibold text-foreground">{profile.wallet_id}</p>
+                  <p className="font-mono font-semibold text-foreground truncate">{profile.wallet_id}</p>
                 </div>
                 <CopyButton text={profile.wallet_id} label="Wallet ID" />
               </div>
@@ -171,11 +198,13 @@ export default function Deposit() {
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="bank" className="gap-2">
               <Building2 className="h-4 w-4" />
-              Bank Transfer
+              <span className="hidden sm:inline">Bank Transfer</span>
+              <span className="sm:hidden">Bank</span>
             </TabsTrigger>
             <TabsTrigger value="crypto" className="gap-2">
-              <Bitcoin className="h-4 w-4" />
-              Cryptocurrency
+              <span className="text-lg">₿</span>
+              <span className="hidden sm:inline">Cryptocurrency</span>
+              <span className="sm:hidden">Crypto</span>
             </TabsTrigger>
           </TabsList>
 
@@ -196,34 +225,34 @@ export default function Deposit() {
                   </div>
                 ) : depositDetails ? (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Bank Name</p>
-                        <p className="font-medium text-foreground">{depositDetails.bankName}</p>
+                        <p className="font-medium text-foreground truncate">{depositDetails.bankName}</p>
                       </div>
                       <CopyButton text={depositDetails.bankName || ''} label="Bank Name" />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Account Name</p>
-                        <p className="font-medium text-foreground">{depositDetails.bankAccountName}</p>
+                        <p className="font-medium text-foreground truncate">{depositDetails.bankAccountName}</p>
                       </div>
                       <CopyButton text={depositDetails.bankAccountName || ''} label="Account Name" />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Account Number</p>
-                        <p className="font-mono font-semibold text-foreground">{depositDetails.bankAccount}</p>
+                        <p className="font-mono font-semibold text-foreground truncate">{depositDetails.bankAccount}</p>
                       </div>
                       <CopyButton text={depositDetails.bankAccount || ''} label="Account Number" />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Routing Number</p>
-                        <p className="font-mono font-semibold text-foreground">{depositDetails.bankRouting}</p>
+                        <p className="font-mono font-semibold text-foreground truncate">{depositDetails.bankRouting}</p>
                       </div>
                       <CopyButton text={depositDetails.bankRouting || ''} label="Routing Number" />
                     </div>
@@ -251,15 +280,15 @@ export default function Deposit() {
               <CardContent className="space-y-4">
                 {/* Crypto Selection */}
                 <div className="flex gap-2">
-                  {(['BTC', 'ETH', 'USDT'] as CryptoType[]).map((crypto) => (
+                  {cryptoOptions.map((crypto) => (
                     <Button
-                      key={crypto}
-                      variant={selectedCrypto === crypto ? 'default' : 'outline'}
+                      key={crypto.code}
+                      variant={selectedCrypto === crypto.code ? 'default' : 'outline'}
                       className="flex-1 gap-2"
-                      onClick={() => setSelectedCrypto(crypto)}
+                      onClick={() => setSelectedCrypto(crypto.code)}
                     >
-                      <span className="text-lg">{cryptoIcons[crypto]}</span>
-                      {crypto}
+                      {crypto.icon}
+                      <span className="hidden sm:inline">{crypto.code}</span>
                     </Button>
                   ))}
                 </div>
@@ -270,16 +299,16 @@ export default function Deposit() {
                     <p className="text-sm text-muted-foreground">Fetching secure wallet address...</p>
                     <p className="text-xs text-muted-foreground mt-1">Please wait</p>
                   </div>
-                ) : depositDetails ? (
+                ) : selectedAddress ? (
                   <div className="space-y-4">
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-xs text-muted-foreground mb-2">{selectedCrypto} Deposit Address</p>
                       <div className="flex items-center gap-2">
                         <p className="font-mono text-sm text-foreground break-all flex-1">
-                          {getCryptoAddress(selectedCrypto)}
+                          {selectedAddress}
                         </p>
                         <CopyButton 
-                          text={getCryptoAddress(selectedCrypto)} 
+                          text={selectedAddress} 
                           label={`${selectedCrypto} Address`} 
                         />
                       </div>
@@ -304,7 +333,12 @@ export default function Deposit() {
                       </p>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No deposit address available for {selectedCrypto}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Please contact support</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

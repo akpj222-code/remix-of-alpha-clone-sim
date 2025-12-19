@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp } from 'lucide-react';
+import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +63,18 @@ interface WithdrawalRequest {
   profiles?: { email: string; full_name: string | null; wallet_id: string | null } | null;
 }
 
+interface Transaction {
+  id: string;
+  user_id: string;
+  type: string;
+  method: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  notes: string | null;
+  profiles?: { email: string; full_name: string | null } | null;
+}
+
 interface Stats {
   total: number;
   pending: number;
@@ -78,13 +90,18 @@ interface AdminSettings {
   deposit_btc_address: string;
   deposit_eth_address: string;
   deposit_usdt_address: string;
+  deposit_btc_addresses: string;
+  deposit_eth_addresses: string;
+  deposit_usdt_addresses: string;
   tamg_share_price: string;
+  min_shares_purchase: string;
 }
 
 export default function Admin() {
   const [kycRequests, setKycRequests] = useState<KYCRequestWithProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [selectedKYC, setSelectedKYC] = useState<KYCRequestWithProfile | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -96,6 +113,7 @@ export default function Admin() {
   const [userSearch, setUserSearch] = useState('');
   const [fundAmount, setFundAmount] = useState('');
   const [fundAction, setFundAction] = useState<'add' | 'remove'>('add');
+  const [newWalletAddress, setNewWalletAddress] = useState({ btc: '', eth: '', usdt: '' });
   const [adminSettings, setAdminSettings] = useState<AdminSettings>({
     deposit_bank_name: '',
     deposit_bank_account: '',
@@ -104,7 +122,11 @@ export default function Admin() {
     deposit_btc_address: '',
     deposit_eth_address: '',
     deposit_usdt_address: '',
+    deposit_btc_addresses: '[]',
+    deposit_eth_addresses: '[]',
+    deposit_usdt_addresses: '[]',
     tamg_share_price: '25.00',
+    min_shares_purchase: '1',
   });
   const { toast } = useToast();
 
@@ -113,6 +135,7 @@ export default function Admin() {
     fetchUsers();
     fetchAdminSettings();
     fetchWithdrawals();
+    fetchTransactions();
   }, []);
 
   const fetchData = async () => {
@@ -162,6 +185,21 @@ export default function Admin() {
     }
   };
 
+  const fetchTransactions = async () => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        profiles:user_id (email, full_name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setTransactions(data as unknown as Transaction[]);
+    }
+  };
+
   const fetchAdminSettings = async () => {
     const { data, error } = await supabase
       .from('admin_settings')
@@ -186,6 +224,48 @@ export default function Admin() {
     } else {
       toast({ title: 'Success', description: 'Setting updated' });
       fetchAdminSettings();
+    }
+  };
+
+  const addWalletAddress = async (type: 'btc' | 'eth' | 'usdt') => {
+    const addressKey = `deposit_${type}_addresses`;
+    const newAddress = newWalletAddress[type].trim();
+    
+    if (!newAddress) {
+      toast({ title: 'Error', description: 'Please enter a wallet address', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const currentAddresses = JSON.parse(adminSettings[addressKey as keyof AdminSettings] || '[]');
+      const updatedAddresses = [...currentAddresses, newAddress];
+      
+      await updateAdminSetting(addressKey, JSON.stringify(updatedAddresses));
+      setNewWalletAddress(prev => ({ ...prev, [type]: '' }));
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to add address', variant: 'destructive' });
+    }
+  };
+
+  const removeWalletAddress = async (type: 'btc' | 'eth' | 'usdt', index: number) => {
+    const addressKey = `deposit_${type}_addresses`;
+    
+    try {
+      const currentAddresses = JSON.parse(adminSettings[addressKey as keyof AdminSettings] || '[]');
+      currentAddresses.splice(index, 1);
+      
+      await updateAdminSetting(addressKey, JSON.stringify(currentAddresses));
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to remove address', variant: 'destructive' });
+    }
+  };
+
+  const getWalletAddresses = (type: 'btc' | 'eth' | 'usdt'): string[] => {
+    const addressKey = `deposit_${type}_addresses`;
+    try {
+      return JSON.parse(adminSettings[addressKey as keyof AdminSettings] || '[]');
+    } catch {
+      return [];
     }
   };
 
@@ -272,6 +352,20 @@ export default function Admin() {
     }
   };
 
+  const handleTransactionAction = async (id: string, status: 'completed' | 'failed') => {
+    const { error } = await supabase
+      .from('transactions')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: `Transaction marked as ${status}` });
+      fetchTransactions();
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
     user.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -280,6 +374,7 @@ export default function Admin() {
 
   const pendingRequests = kycRequests.filter(k => k.status === 'pending');
   const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending');
+  const pendingTransactions = transactions.filter(t => t.status === 'pending');
 
   return (
     <AppLayout>
@@ -310,6 +405,15 @@ export default function Admin() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="payments" className="gap-2">
+              <CreditCard className="h-4 w-4" />
+              <span className="hidden sm:inline">Payments</span>
+              {pendingTransactions.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {pendingTransactions.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings2 className="h-4 w-4" />
               <span className="hidden sm:inline">Settings</span>
@@ -319,44 +423,44 @@ export default function Admin() {
           {/* KYC Tab */}
           <TabsContent value="kyc" className="space-y-6">
             {/* Stats */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+              <Card className="min-w-0">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Applications</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Applications</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.total}</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
-                  <Clock className="h-4 w-4 text-warning" />
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Pending</CardTitle>
+                  <Clock className="h-4 w-4 text-warning flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-warning">{stats.pending}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-warning">{stats.pending}</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
-                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Approved</CardTitle>
+                  <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-success">{stats.approved}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-success">{stats.approved}</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Rejected</CardTitle>
-                  <XCircle className="h-4 w-4 text-destructive" />
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Rejected</CardTitle>
+                  <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-destructive">{stats.rejected}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-destructive">{stats.rejected}</p>
                 </CardContent>
               </Card>
             </div>
@@ -373,22 +477,22 @@ export default function Admin() {
                   <div className="space-y-4">
                     {pendingRequests.map((kyc) => (
                       <div key={kyc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-foreground truncate">
                               {kyc.account_type === 'individual' ? kyc.full_name : kyc.company_name}
                             </p>
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="flex-shrink-0">
                               {kyc.account_type === 'individual' ? 'Individual' : 'Corporate'}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">{kyc.profiles?.email}</p>
+                          <p className="text-sm text-muted-foreground truncate">{kyc.profiles?.email}</p>
                           <p className="text-xs text-muted-foreground">
                             Submitted: {new Date(kyc.submitted_at).toLocaleDateString()}
                           </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 flex-shrink-0">
                           <Button 
                             variant="outline" 
                             size="sm" 
@@ -422,16 +526,16 @@ export default function Admin() {
               <CardContent>
                 <div className="space-y-3">
                   {kycRequests.map((kyc) => (
-                    <div key={kyc.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-medium text-foreground">
+                    <div key={kyc.id} className="flex items-center justify-between p-3 rounded-lg border gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground truncate">
                             {kyc.account_type === 'individual' ? kyc.full_name : kyc.company_name}
                           </p>
-                          <p className="text-xs text-muted-foreground">{kyc.profiles?.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{kyc.profiles?.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -474,17 +578,17 @@ export default function Admin() {
 
                 <div className="space-y-3">
                   {filteredUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{user.full_name || 'N/A'}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <div className="flex items-center gap-4 mt-1">
+                    <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">{user.full_name || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                        <div className="flex items-center gap-4 mt-1 flex-wrap">
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Wallet className="h-3 w-3" />
-                            {user.wallet_id || 'No wallet'}
+                            <Wallet className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate max-w-[100px]">{user.wallet_id || 'No wallet'}</span>
                           </span>
                           <span className="text-xs font-medium text-success flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
+                            <DollarSign className="h-3 w-3 flex-shrink-0" />
                             ${user.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </span>
                         </div>
@@ -492,6 +596,7 @@ export default function Admin() {
                       <Button 
                         variant="outline" 
                         size="sm"
+                        className="flex-shrink-0"
                         onClick={() => { setSelectedUser(user); setShowUserEditDialog(true); }}
                       >
                         Manage Funds
@@ -518,12 +623,12 @@ export default function Admin() {
                     {pendingWithdrawals.map((withdrawal) => (
                       <div key={withdrawal.id} className="p-4 rounded-lg border">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <p className="font-medium text-foreground">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground truncate">
                               {withdrawal.profiles?.full_name || withdrawal.profiles?.email}
                             </p>
-                            <p className="text-sm text-muted-foreground">{withdrawal.profiles?.email}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm text-muted-foreground truncate">{withdrawal.profiles?.email}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <Badge variant="outline">{withdrawal.method.toUpperCase()}</Badge>
                               {withdrawal.crypto_type && (
                                 <Badge variant="secondary">{withdrawal.crypto_type.toUpperCase()}</Badge>
@@ -538,7 +643,7 @@ export default function Admin() {
                               </p>
                             )}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0">
                             <p className="text-xl font-bold text-foreground">
                               ${withdrawal.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </p>
@@ -547,7 +652,7 @@ export default function Admin() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2 mt-4 flex-wrap">
                           <Button 
                             size="sm" 
                             className="bg-success hover:bg-success/90"
@@ -577,17 +682,18 @@ export default function Admin() {
               <CardContent>
                 <div className="space-y-3">
                   {withdrawals.map((withdrawal) => (
-                    <div key={withdrawal.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div>
-                        <p className="font-medium text-foreground">
+                    <div key={withdrawal.id} className="flex items-center justify-between p-3 rounded-lg border gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">
                           {withdrawal.profiles?.full_name || withdrawal.profiles?.email}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground truncate">
                           ${withdrawal.amount.toFixed(2)} via {withdrawal.method}
                           {withdrawal.crypto_type && ` (${withdrawal.crypto_type.toUpperCase()})`}
                         </p>
                       </div>
                       <Badge className={cn(
+                        'flex-shrink-0',
                         withdrawal.status === 'completed' && 'bg-success/10 text-success',
                         withdrawal.status === 'pending' && 'bg-warning/10 text-warning',
                         withdrawal.status === 'declined' && 'bg-destructive/10 text-destructive',
@@ -602,32 +708,148 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          {/* Payments Tab */}
+          <TabsContent value="payments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5" />
+                  Pending Payments & Purchases
+                </CardTitle>
+                <CardDescription>Review user payments for crypto, stocks, and other purchases</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingTransactions.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No pending payments</p>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingTransactions.map((transaction) => (
+                      <div key={transaction.id} className="p-4 rounded-lg border">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground truncate">
+                              {transaction.profiles?.full_name || transaction.profiles?.email}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">{transaction.profiles?.email}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <Badge variant="outline">{transaction.type.toUpperCase()}</Badge>
+                              <Badge variant="secondary">{transaction.method.toUpperCase()}</Badge>
+                            </div>
+                            {transaction.notes && (
+                              <p className="text-xs text-muted-foreground mt-1 break-all">
+                                Notes: {transaction.notes}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-xl font-bold text-foreground">
+                              ${transaction.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(transaction.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-4 flex-wrap">
+                          <Button 
+                            size="sm" 
+                            className="bg-success hover:bg-success/90"
+                            onClick={() => handleTransactionAction(transaction.id, 'completed')}
+                          >
+                            Mark Completed
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleTransactionAction(transaction.id, 'failed')}
+                          >
+                            Mark Failed
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>All Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {transactions.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg border gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">
+                          {transaction.profiles?.full_name || transaction.profiles?.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          ${transaction.amount.toFixed(2)} - {transaction.type} ({transaction.method})
+                        </p>
+                      </div>
+                      <Badge className={cn(
+                        'flex-shrink-0',
+                        transaction.status === 'completed' && 'bg-success/10 text-success',
+                        transaction.status === 'pending' && 'bg-warning/10 text-warning',
+                        transaction.status === 'failed' && 'bg-destructive/10 text-destructive'
+                      )}>
+                        {transaction.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            {/* TAMG Share Price */}
+            {/* TAMG Share Settings */}
             <Card className="border-primary/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  TAMG Share Price
+                  TAMG Share Settings
                 </CardTitle>
-                <CardDescription>Set the current price per TAMIC GROUP share</CardDescription>
+                <CardDescription>Configure TAMIC GROUP share price and purchase limits</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Share Price (USD)</label>
+                  <div className="flex gap-2 mt-1">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={adminSettings.tamg_share_price}
+                        onChange={(e) => setAdminSettings({ ...adminSettings, tamg_share_price: e.target.value })}
+                        className="pl-7"
+                      />
+                    </div>
+                    <Button onClick={() => updateAdminSetting('tamg_share_price', adminSettings.tamg_share_price)}>
+                      Update
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Minimum Shares Purchase</label>
+                  <div className="flex gap-2 mt-1">
                     <Input
                       type="number"
-                      step="0.01"
-                      value={adminSettings.tamg_share_price}
-                      onChange={(e) => setAdminSettings({ ...adminSettings, tamg_share_price: e.target.value })}
-                      className="pl-7"
+                      step="1"
+                      min="1"
+                      value={adminSettings.min_shares_purchase}
+                      onChange={(e) => setAdminSettings({ ...adminSettings, min_shares_purchase: e.target.value })}
+                      placeholder="1"
                     />
+                    <Button onClick={() => updateAdminSetting('min_shares_purchase', adminSettings.min_shares_purchase)}>
+                      Update
+                    </Button>
                   </div>
-                  <Button onClick={() => updateAdminSetting('tamg_share_price', adminSettings.tamg_share_price)}>
-                    Update Price
-                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">Users must purchase at least this many shares</p>
                 </div>
               </CardContent>
             </Card>
@@ -684,40 +906,84 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Crypto Deposit Addresses</CardTitle>
-                <CardDescription>Configure cryptocurrency wallet addresses for deposits</CardDescription>
+                <CardDescription>Configure cryptocurrency wallet addresses for deposits. Add multiple addresses per network for random selection.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground">BTC Address</label>
-                  <div className="flex gap-2 mt-1">
+              <CardContent className="space-y-6">
+                {/* BTC Addresses */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">BTC Addresses</label>
+                  <div className="space-y-2">
+                    {getWalletAddresses('btc').map((addr, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <Input value={addr} readOnly className="font-mono text-xs flex-1" />
+                        <Button variant="destructive" size="sm" onClick={() => removeWalletAddress('btc', idx)}>
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
                     <Input
-                      value={adminSettings.deposit_btc_address}
-                      onChange={(e) => setAdminSettings({ ...adminSettings, deposit_btc_address: e.target.value })}
-                      className="font-mono text-sm"
+                      placeholder="Add new BTC address..."
+                      value={newWalletAddress.btc}
+                      onChange={(e) => setNewWalletAddress(prev => ({ ...prev, btc: e.target.value }))}
+                      className="font-mono text-sm flex-1"
                     />
-                    <Button onClick={() => updateAdminSetting('deposit_btc_address', adminSettings.deposit_btc_address)}>Save</Button>
+                    <Button onClick={() => addWalletAddress('btc')} className="gap-1">
+                      <Plus className="h-4 w-4" /> Add
+                    </Button>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">ETH Address (ERC20)</label>
-                  <div className="flex gap-2 mt-1">
+
+                {/* ETH Addresses */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">ETH Addresses (ERC20)</label>
+                  <div className="space-y-2">
+                    {getWalletAddresses('eth').map((addr, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <Input value={addr} readOnly className="font-mono text-xs flex-1" />
+                        <Button variant="destructive" size="sm" onClick={() => removeWalletAddress('eth', idx)}>
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
                     <Input
-                      value={adminSettings.deposit_eth_address}
-                      onChange={(e) => setAdminSettings({ ...adminSettings, deposit_eth_address: e.target.value })}
-                      className="font-mono text-sm"
+                      placeholder="Add new ETH address..."
+                      value={newWalletAddress.eth}
+                      onChange={(e) => setNewWalletAddress(prev => ({ ...prev, eth: e.target.value }))}
+                      className="font-mono text-sm flex-1"
                     />
-                    <Button onClick={() => updateAdminSetting('deposit_eth_address', adminSettings.deposit_eth_address)}>Save</Button>
+                    <Button onClick={() => addWalletAddress('eth')} className="gap-1">
+                      <Plus className="h-4 w-4" /> Add
+                    </Button>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">USDT Address (TRC20)</label>
-                  <div className="flex gap-2 mt-1">
+
+                {/* USDT Addresses */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">USDT Addresses (TRC20)</label>
+                  <div className="space-y-2">
+                    {getWalletAddresses('usdt').map((addr, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <Input value={addr} readOnly className="font-mono text-xs flex-1" />
+                        <Button variant="destructive" size="sm" onClick={() => removeWalletAddress('usdt', idx)}>
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
                     <Input
-                      value={adminSettings.deposit_usdt_address}
-                      onChange={(e) => setAdminSettings({ ...adminSettings, deposit_usdt_address: e.target.value })}
-                      className="font-mono text-sm"
+                      placeholder="Add new USDT address..."
+                      value={newWalletAddress.usdt}
+                      onChange={(e) => setNewWalletAddress(prev => ({ ...prev, usdt: e.target.value }))}
+                      className="font-mono text-sm flex-1"
                     />
-                    <Button onClick={() => updateAdminSetting('deposit_usdt_address', adminSettings.deposit_usdt_address)}>Save</Button>
+                    <Button onClick={() => addWalletAddress('usdt')} className="gap-1">
+                      <Plus className="h-4 w-4" /> Add
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -736,14 +1002,14 @@ export default function Admin() {
             </DialogHeader>
             {selectedKYC && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Name</p>
-                    <p className="font-medium">{selectedKYC.account_type === 'individual' ? selectedKYC.full_name : selectedKYC.company_name}</p>
+                    <p className="font-medium break-words">{selectedKYC.account_type === 'individual' ? selectedKYC.full_name : selectedKYC.company_name}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="font-medium">{selectedKYC.profiles?.email}</p>
+                    <p className="font-medium break-all">{selectedKYC.profiles?.email}</p>
                   </div>
                   {selectedKYC.phone && (
                     <div>
@@ -758,9 +1024,9 @@ export default function Admin() {
                     </div>
                   )}
                   {selectedKYC.address && (
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <p className="text-xs text-muted-foreground">Address</p>
-                      <p className="font-medium">{selectedKYC.address}, {selectedKYC.city}, {selectedKYC.state}, {selectedKYC.country}</p>
+                      <p className="font-medium break-words">{selectedKYC.address}, {selectedKYC.city}, {selectedKYC.state}, {selectedKYC.country}</p>
                     </div>
                   )}
                 </div>
@@ -814,7 +1080,7 @@ export default function Admin() {
                 )}
 
                 {selectedKYC.status === 'pending' && (
-                  <div className="flex gap-2 pt-4 border-t">
+                  <div className="flex gap-2 pt-4 border-t flex-wrap">
                     <Button className="flex-1 bg-success hover:bg-success/90" onClick={() => { handleApprove(selectedKYC.id); setShowKYCDetailsDialog(false); }}>
                       Approve Application
                     </Button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Building2, Shield, ChevronRight } from 'lucide-react';
+import { Sun, Moon, Monitor, Building2, Shield, ChevronRight, Play } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,13 @@ export default function Settings() {
     setSaving(false);
   };
 
+  const handleReplayTutorial = () => {
+    // Clear the tutorial completion flag
+    localStorage.removeItem('tamic_tutorial_completed');
+    toast({ title: 'Tutorial Reset', description: 'The tutorial will play on your next visit to Dashboard' });
+    navigate('/dashboard');
+  };
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -79,19 +86,38 @@ export default function Settings() {
             <CardContent className="p-4">
               <Link to="/admin" className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <Shield className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-foreground">Admin Panel</p>
                     <p className="text-sm text-muted-foreground">Manage users, KYC, and settings</p>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               </Link>
             </CardContent>
           </Card>
         )}
+
+        {/* Tutorial */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5" />
+              App Tutorial
+            </CardTitle>
+            <CardDescription>
+              Watch the guided tour of TAMIC GROUP features
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleReplayTutorial} variant="outline" className="gap-2">
+              <Play className="h-4 w-4" />
+              Replay Tutorial
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Theme Settings */}
         <Card>
@@ -102,35 +128,35 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <button
                 onClick={() => setTheme('light')}
                 className={cn(
-                  "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                  "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-lg border-2 transition-all",
                   theme === 'light' 
                     ? "border-primary bg-primary/5" 
                     : "border-border hover:border-primary/50"
                 )}
               >
-                <div className="h-12 w-12 rounded-full bg-background border flex items-center justify-center">
-                  <Sun className="h-6 w-6 text-warning" />
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-background border flex items-center justify-center">
+                  <Sun className="h-5 w-5 sm:h-6 sm:w-6 text-warning" />
                 </div>
-                <span className="text-sm font-medium text-foreground">Light</span>
+                <span className="text-xs sm:text-sm font-medium text-foreground">Light</span>
               </button>
 
               <button
                 onClick={() => setTheme('dark')}
                 className={cn(
-                  "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                  "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-lg border-2 transition-all",
                   theme === 'dark' 
                     ? "border-primary bg-primary/5" 
                     : "border-border hover:border-primary/50"
                 )}
               >
-                <div className="h-12 w-12 rounded-full bg-card border flex items-center justify-center">
-                  <Moon className="h-6 w-6 text-primary" />
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-card border flex items-center justify-center">
+                  <Moon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
-                <span className="text-sm font-medium text-foreground">Dark</span>
+                <span className="text-xs sm:text-sm font-medium text-foreground">Dark</span>
               </button>
 
               <button
@@ -139,13 +165,13 @@ export default function Settings() {
                   setTheme(prefersDark ? 'dark' : 'light');
                 }}
                 className={cn(
-                  "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all border-border hover:border-primary/50"
+                  "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-lg border-2 transition-all border-border hover:border-primary/50"
                 )}
               >
-                <div className="h-12 w-12 rounded-full bg-muted border flex items-center justify-center">
-                  <Monitor className="h-6 w-6 text-muted-foreground" />
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-muted border flex items-center justify-center">
+                  <Monitor className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                 </div>
-                <span className="text-sm font-medium text-foreground">System</span>
+                <span className="text-xs sm:text-sm font-medium text-foreground">System</span>
               </button>
             </div>
           </CardContent>
@@ -216,20 +242,20 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">Email</span>
-              <span className="text-sm font-medium text-foreground">{profile?.email}</span>
+            <div className="flex justify-between items-center py-2 border-b border-border gap-2">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Email</span>
+              <span className="text-sm font-medium text-foreground truncate">{profile?.email}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">Full Name</span>
-              <span className="text-sm font-medium text-foreground">{profile?.full_name || 'Not set'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-border gap-2">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Full Name</span>
+              <span className="text-sm font-medium text-foreground truncate">{profile?.full_name || 'Not set'}</span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">Wallet ID</span>
-              <span className="text-sm font-medium text-foreground font-mono">{profile?.wallet_id || 'N/A'}</span>
+            <div className="flex justify-between items-center py-2 border-b border-border gap-2">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Wallet ID</span>
+              <span className="text-sm font-medium text-foreground font-mono truncate">{profile?.wallet_id || 'N/A'}</span>
             </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-muted-foreground">Balance</span>
+            <div className="flex justify-between items-center py-2 gap-2">
+              <span className="text-sm text-muted-foreground flex-shrink-0">Balance</span>
               <span className="text-sm font-medium text-foreground">${profile?.balance?.toFixed(2) || '0.00'}</span>
             </div>
           </CardContent>
