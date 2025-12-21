@@ -175,6 +175,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_tutorial_completed: boolean | null
           balance: number | null
           bank_account_name: string | null
           bank_account_number: string | null
@@ -184,10 +185,12 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          tutorial_completed: boolean | null
           updated_at: string | null
           wallet_id: string | null
         }
         Insert: {
+          admin_tutorial_completed?: boolean | null
           balance?: number | null
           bank_account_name?: string | null
           bank_account_number?: string | null
@@ -197,10 +200,12 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          tutorial_completed?: boolean | null
           updated_at?: string | null
           wallet_id?: string | null
         }
         Update: {
+          admin_tutorial_completed?: boolean | null
           balance?: number | null
           bank_account_name?: string | null
           bank_account_number?: string | null
@@ -210,6 +215,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          tutorial_completed?: boolean | null
           updated_at?: string | null
           wallet_id?: string | null
         }
@@ -341,6 +347,7 @@ export type Database = {
       user_wallets: {
         Row: {
           address: string
+          balance: number | null
           created_at: string
           currency: string
           id: string
@@ -348,6 +355,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          balance?: number | null
           created_at?: string
           currency: string
           id?: string
@@ -355,6 +363,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          balance?: number | null
           created_at?: string
           currency?: string
           id?: string
@@ -368,6 +377,7 @@ export type Database = {
           amount: number
           created_at: string
           crypto_type: string | null
+          from_tamic_wallet: boolean | null
           id: string
           method: string
           status: string
@@ -380,6 +390,7 @@ export type Database = {
           amount: number
           created_at?: string
           crypto_type?: string | null
+          from_tamic_wallet?: boolean | null
           id?: string
           method: string
           status?: string
@@ -392,6 +403,7 @@ export type Database = {
           amount?: number
           created_at?: string
           crypto_type?: string | null
+          from_tamic_wallet?: boolean | null
           id?: string
           method?: string
           status?: string
