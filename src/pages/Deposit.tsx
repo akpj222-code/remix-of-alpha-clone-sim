@@ -7,18 +7,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-// Custom ETH Diamond Icon
-const EthDiamondIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 256 417" className={className} fill="currentColor">
-    <path d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" opacity="0.6"/>
-    <path d="M127.962 0L0 212.32l127.962 75.639V154.158z"/>
-    <path d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.601L256 236.587z" opacity="0.6"/>
-    <path d="M127.962 416.905v-104.72L0 236.585z"/>
-    <path d="M127.961 287.958l127.96-75.637-127.96-58.162z" opacity="0.2"/>
-    <path d="M0 212.32l127.96 75.638v-133.8z" opacity="0.6"/>
-  </svg>
-);
+import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
 
 type DepositMethod = 'bank' | 'crypto';
 type CryptoType = 'BTC' | 'ETH' | 'USDT';
@@ -145,10 +134,10 @@ export default function Deposit() {
     </Button>
   );
 
-  const cryptoOptions: { code: CryptoType; name: string; icon: React.ReactNode }[] = [
-    { code: 'BTC', name: 'Bitcoin', icon: <span className="text-lg text-orange-500">₿</span> },
-    { code: 'ETH', name: 'Ethereum', icon: <EthDiamondIcon className="h-5 w-5 text-blue-500" /> },
-    { code: 'USDT', name: 'Tether', icon: <span className="text-lg text-green-500">₮</span> },
+  const cryptoOptions: { code: CryptoType; name: string; network: string; icon: React.ReactNode }[] = [
+    { code: 'BTC', name: 'Bitcoin', network: '', icon: <span className="text-lg text-orange-500">₿</span> },
+    { code: 'ETH', name: 'Ethereum', network: 'ERC20', icon: <EthDiamondIcon className="h-5 w-5 text-blue-500" /> },
+    { code: 'USDT', name: 'Tether', network: 'TRC20', icon: <span className="text-lg text-green-500">₮</span> },
   ];
 
   return (
@@ -156,7 +145,7 @@ export default function Deposit() {
       <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Deposit Funds</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Add funds to your TAMIC account
           </p>
         </div>
@@ -168,7 +157,7 @@ export default function Deposit() {
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Wallet className="h-6 w-6 text-primary" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-muted-foreground">Current Balance</p>
                 <p className="text-xl sm:text-2xl font-bold text-foreground truncate">
                   ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -196,12 +185,12 @@ export default function Deposit() {
         {/* Deposit Method Tabs */}
         <Tabs value={method} onValueChange={(v) => setMethod(v as DepositMethod)}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="bank" className="gap-2">
+            <TabsTrigger value="bank" className="gap-2 text-xs sm:text-sm">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Bank Transfer</span>
               <span className="sm:hidden">Bank</span>
             </TabsTrigger>
-            <TabsTrigger value="crypto" className="gap-2">
+            <TabsTrigger value="crypto" className="gap-2 text-xs sm:text-sm">
               <span className="text-lg">₿</span>
               <span className="hidden sm:inline">Cryptocurrency</span>
               <span className="sm:hidden">Crypto</span>
@@ -210,13 +199,13 @@ export default function Deposit() {
 
           <TabsContent value="bank" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Bank Transfer Details</CardTitle>
-                <CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Bank Transfer Details</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Transfer funds to the account below. Your balance will be updated within 24-48 hours.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -224,40 +213,40 @@ export default function Deposit() {
                     <p className="text-xs text-muted-foreground mt-1">This may take a moment</p>
                   </div>
                 ) : depositDetails ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-muted/50 rounded-lg gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Bank Name</p>
-                        <p className="font-medium text-foreground truncate">{depositDetails.bankName}</p>
+                        <p className="font-medium text-foreground text-sm truncate">{depositDetails.bankName}</p>
                       </div>
                       <CopyButton text={depositDetails.bankName || ''} label="Bank Name" />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-muted/50 rounded-lg gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Account Name</p>
-                        <p className="font-medium text-foreground truncate">{depositDetails.bankAccountName}</p>
+                        <p className="font-medium text-foreground text-sm truncate">{depositDetails.bankAccountName}</p>
                       </div>
                       <CopyButton text={depositDetails.bankAccountName || ''} label="Account Name" />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-muted/50 rounded-lg gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Account Number</p>
-                        <p className="font-mono font-semibold text-foreground truncate">{depositDetails.bankAccount}</p>
+                        <p className="font-mono font-semibold text-foreground text-sm truncate">{depositDetails.bankAccount}</p>
                       </div>
                       <CopyButton text={depositDetails.bankAccount || ''} label="Account Number" />
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-muted/50 rounded-lg gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-xs text-muted-foreground">Routing Number</p>
-                        <p className="font-mono font-semibold text-foreground truncate">{depositDetails.bankRouting}</p>
+                        <p className="font-mono font-semibold text-foreground text-sm truncate">{depositDetails.bankRouting}</p>
                       </div>
                       <CopyButton text={depositDetails.bankRouting || ''} label="Routing Number" />
                     </div>
 
-                    <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                    <div className="p-3 sm:p-4 bg-warning/10 border border-warning/20 rounded-lg">
                       <p className="text-sm text-warning font-medium">Important</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Include your Wallet ID ({profile?.wallet_id}) in the transfer reference for faster processing.
@@ -271,9 +260,9 @@ export default function Deposit() {
 
           <TabsContent value="crypto" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Cryptocurrency Deposit</CardTitle>
-                <CardDescription>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Cryptocurrency Deposit</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Send cryptocurrency to receive equivalent USD in your account.
                 </CardDescription>
               </CardHeader>
@@ -284,11 +273,14 @@ export default function Deposit() {
                     <Button
                       key={crypto.code}
                       variant={selectedCrypto === crypto.code ? 'default' : 'outline'}
-                      className="flex-1 gap-2"
+                      className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
                       onClick={() => setSelectedCrypto(crypto.code)}
                     >
                       {crypto.icon}
-                      <span className="hidden sm:inline">{crypto.code}</span>
+                      <span>{crypto.code}</span>
+                      {crypto.network && (
+                        <span className="hidden sm:inline text-[10px] opacity-70">({crypto.network})</span>
+                      )}
                     </Button>
                   ))}
                 </div>
@@ -301,10 +293,15 @@ export default function Deposit() {
                   </div>
                 ) : selectedAddress ? (
                   <div className="space-y-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-2">{selectedCrypto} Deposit Address</p>
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {selectedCrypto} Deposit Address 
+                        {cryptoOptions.find(c => c.code === selectedCrypto)?.network && 
+                          ` (${cryptoOptions.find(c => c.code === selectedCrypto)?.network})`
+                        }
+                      </p>
                       <div className="flex items-center gap-2">
-                        <p className="font-mono text-sm text-foreground break-all flex-1">
+                        <p className="font-mono text-[10px] sm:text-sm text-foreground break-all flex-1">
                           {selectedAddress}
                         </p>
                         <CopyButton 
@@ -314,14 +311,14 @@ export default function Deposit() {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <div className="p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                       <p className="text-sm text-destructive font-medium">Warning</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Only send {selectedCrypto} to this address. Sending other cryptocurrencies may result in permanent loss.
                       </p>
                     </div>
 
-                    <div className="p-4 bg-muted/30 rounded-lg">
+                    <div className="p-3 sm:p-4 bg-muted/30 rounded-lg space-y-1">
                       <p className="text-xs text-muted-foreground">
                         • Minimum deposit: {selectedCrypto === 'BTC' ? '0.0005 BTC' : selectedCrypto === 'ETH' ? '0.01 ETH' : '50 USDT'}
                       </p>
@@ -335,7 +332,7 @@ export default function Deposit() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground">No deposit address available for {selectedCrypto}</p>
+                    <p className="text-muted-foreground text-sm">No deposit address available for {selectedCrypto}</p>
                     <p className="text-xs text-muted-foreground mt-1">Please contact support</p>
                   </div>
                 )}

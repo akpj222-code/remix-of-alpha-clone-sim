@@ -8,11 +8,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
 
 interface UserWallet {
   id: string;
   currency: string;
   address: string;
+  balance: number;
 }
 
 export default function WalletPage() {
@@ -38,7 +40,7 @@ export default function WalletPage() {
       .eq('user_id', user.id);
     
     if (!error && data) {
-      setWallets(data);
+      setWallets(data.map(w => ({ ...w, balance: Number(w.balance) || 0 })));
     }
   };
 
@@ -76,7 +78,8 @@ export default function WalletPage() {
       .insert({
         user_id: user.id,
         currency,
-        address
+        address,
+        balance: 0
       });
     
     if (error) {
@@ -97,9 +100,9 @@ export default function WalletPage() {
   };
 
   const supportedCurrencies = [
-    { code: 'BTC', name: 'Bitcoin', icon: '₿', network: '' },
-    { code: 'ETH', name: 'Ethereum', icon: 'Ξ', network: 'ERC20' },
-    { code: 'USDT', name: 'Tether', icon: '₮', network: 'TRC20' },
+    { code: 'BTC', name: 'Bitcoin', icon: <span className="text-lg font-bold text-orange-500">₿</span>, network: '' },
+    { code: 'ETH', name: 'Ethereum', icon: <EthDiamondIcon className="h-5 w-5 text-blue-500" />, network: 'ERC20' },
+    { code: 'USDT', name: 'Tether', icon: <span className="text-lg font-bold text-green-500">₮</span>, network: 'TRC20' },
   ];
 
   const hasWallet = (currency: string) => wallets.some(w => w.currency === currency);
@@ -112,23 +115,23 @@ export default function WalletPage() {
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Wallet</h1>
-            <p className="text-muted-foreground">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-foreground truncate">Wallet</h1>
+            <p className="text-muted-foreground text-sm truncate">
               Manage your crypto wallets and balances
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Link to="/deposit">
-              <Button className="gap-2">
+              <Button className="gap-2" size="sm">
                 <Plus className="h-4 w-4" />
-                Deposit
+                <span className="hidden sm:inline">Deposit</span>
               </Button>
             </Link>
             <Link to="/withdraw">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2" size="sm">
                 <ArrowDownToLine className="h-4 w-4" />
-                Withdraw
+                <span className="hidden sm:inline">Withdraw</span>
               </Button>
             </Link>
           </div>
@@ -136,45 +139,45 @@ export default function WalletPage() {
 
         {/* Main Balance Card */}
         <Card className="border-primary/20">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Wallet className="h-7 w-7 text-primary" />
+              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Wallet className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-muted-foreground">Account Balance</p>
-                <p className="text-3xl font-bold text-foreground">
+                <p className="text-2xl sm:text-3xl font-bold text-foreground truncate">
                   ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
             {/* Currency Breakdown */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">USD</span>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-lg min-w-0">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">USD</span>
                 </div>
-                <p className="font-semibold text-foreground text-sm">
+                <p className="font-semibold text-foreground text-xs sm:text-sm truncate">
                   ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <PoundSterling className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">GBP</span>
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-lg min-w-0">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <PoundSterling className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">GBP</span>
                 </div>
-                <p className="font-semibold text-foreground text-sm">
+                <p className="font-semibold text-foreground text-xs sm:text-sm truncate">
                   £{((profile?.balance || 0) * rates.GBP).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Euro className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">EUR</span>
+              <div className="p-2 sm:p-3 bg-muted/50 rounded-lg min-w-0">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <Euro className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">EUR</span>
                 </div>
-                <p className="font-semibold text-foreground text-sm">
+                <p className="font-semibold text-foreground text-xs sm:text-sm truncate">
                   €{((profile?.balance || 0) * rates.EUR).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -186,14 +189,15 @@ export default function WalletPage() {
         {profile?.wallet_id && (
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs text-muted-foreground">Your TAMIC Wallet ID</p>
-                  <p className="font-mono font-bold text-lg text-foreground">{profile.wallet_id}</p>
+                  <p className="font-mono font-bold text-base sm:text-lg text-foreground truncate">{profile.wallet_id}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="flex-shrink-0"
                   onClick={() => copyToClipboard(profile.wallet_id!, 'Wallet ID')}
                 >
                   {copied === 'Wallet ID' ? (
@@ -209,8 +213,8 @@ export default function WalletPage() {
 
         {/* Crypto Wallets */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Bitcoin className="h-5 w-5" />
               Crypto Wallets
             </CardTitle>
@@ -220,26 +224,22 @@ export default function WalletPage() {
               const wallet = getWallet(currency.code);
               const isGenerating = generating === currency.code;
 
-                return (
-                <div key={currency.code} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+              return (
+                <div key={currency.code} className="p-3 sm:p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         currency.code === 'BTC' ? 'bg-orange-500/10' :
                         currency.code === 'ETH' ? 'bg-blue-500/10' :
                         'bg-green-500/10'
                       }`}>
-                        <span className={`text-lg font-bold ${
-                          currency.code === 'BTC' ? 'text-orange-500' :
-                          currency.code === 'ETH' ? 'text-blue-500' :
-                          'text-green-500'
-                        }`}>{currency.icon}</span>
+                        {currency.icon}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">{currency.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                          <p className="font-medium text-foreground text-sm sm:text-base">{currency.name}</p>
                           {currency.network && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-medium">
+                            <span className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-medium flex-shrink-0">
                               {currency.network}
                             </span>
                           )}
@@ -253,33 +253,57 @@ export default function WalletPage() {
                         size="sm"
                         onClick={() => createWallet(currency.code)}
                         disabled={isGenerating}
+                        className="flex-shrink-0 text-xs sm:text-sm"
                       >
-                        {isGenerating ? 'Generating...' : 'Create Wallet'}
+                        {isGenerating ? 'Creating...' : 'Create'}
                       </Button>
                     )}
                   </div>
 
                   {wallet && (
-                    <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 mr-2">
-                          <p className="text-xs text-muted-foreground mb-1">Receive Address</p>
-                          <p className="font-mono text-xs text-foreground break-all">
-                            {wallet.address}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={() => copyToClipboard(wallet.address, `${currency.code} Address`)}
-                        >
-                          {copied === `${currency.code} Address` ? (
-                            <Check className="h-4 w-4 text-success" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
+                    <div className="mt-3 space-y-2">
+                      {/* Wallet Balance */}
+                      <div className="p-2 sm:p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground">Balance</p>
+                            <p className="font-bold text-foreground text-sm sm:text-base truncate">
+                              {wallet.balance.toFixed(8)} {currency.code}
+                            </p>
+                          </div>
+                          {wallet.balance > 0 && (
+                            <Link to={`/withdraw?crypto=${currency.code.toLowerCase()}&fromTamic=true`}>
+                              <Button variant="outline" size="sm" className="gap-1 flex-shrink-0 text-xs">
+                                <ArrowDownToLine className="h-3 w-3" />
+                                <span className="hidden sm:inline">Withdraw</span>
+                              </Button>
+                            </Link>
                           )}
-                        </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Wallet Address */}
+                      <div className="p-2 sm:p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">Receive Address</p>
+                            <p className="font-mono text-[10px] sm:text-xs text-foreground break-all">
+                              {wallet.address}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0"
+                            onClick={() => copyToClipboard(wallet.address, `${currency.code} Address`)}
+                          >
+                            {copied === `${currency.code} Address` ? (
+                              <Check className="h-4 w-4 text-success" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
