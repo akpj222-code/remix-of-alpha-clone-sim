@@ -60,6 +60,7 @@ interface WithdrawalRequest {
   wallet_address: string | null;
   status: string;
   created_at: string;
+  from_tamic_wallet: boolean | null;
   profiles?: { email: string; full_name: string | null; wallet_id: string | null } | null;
 }
 
@@ -373,7 +374,8 @@ export default function Admin() {
   );
 
   const pendingRequests = kycRequests.filter(k => k.status === 'pending');
-  const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending');
+  const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending' && !w.from_tamic_wallet);
+  const autoCompletedWithdrawals = withdrawals.filter(w => w.status === 'completed' && w.from_tamic_wallet);
   const pendingTransactions = transactions.filter(t => t.status === 'pending');
 
   return (
@@ -610,10 +612,51 @@ export default function Admin() {
 
           {/* Withdrawals Tab */}
           <TabsContent value="withdrawals" className="space-y-6">
+            {/* Auto-Completed TAMIC Wallet Withdrawals */}
+            <Card className="border-success/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Auto-Completed TAMIC Wallet Transfers
+                </CardTitle>
+                <CardDescription>These withdrawals were automatically transferred to user's TAMIC wallet</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {autoCompletedWithdrawals.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No auto-completed transfers</p>
+                ) : (
+                  <div className="space-y-3">
+                    {autoCompletedWithdrawals.slice(0, 10).map((withdrawal) => (
+                      <div key={withdrawal.id} className="flex items-center justify-between p-3 rounded-lg border border-success/20 bg-success/5 gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground truncate">
+                            {withdrawal.profiles?.full_name || withdrawal.profiles?.email}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ${withdrawal.amount.toFixed(2)} {withdrawal.crypto_type?.toUpperCase()} auto-transferred to TAMIC wallet
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(withdrawal.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <Badge className="bg-success/10 text-success flex-shrink-0">
+                          AUTO-COMPLETED
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pending Manual Withdrawals */}
             <Card>
               <CardHeader>
-                <CardTitle>Pending Withdrawals</CardTitle>
-                <CardDescription>Review and process withdrawal requests</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-warning" />
+                  Pending Withdrawals (Manual Processing Required)
+                </CardTitle>
+                <CardDescription>Bank transfers and external crypto wallet withdrawals that need manual processing</CardDescription>
               </CardHeader>
               <CardContent>
                 {pendingWithdrawals.length === 0 ? (
@@ -621,7 +664,7 @@ export default function Admin() {
                 ) : (
                   <div className="space-y-4">
                     {pendingWithdrawals.map((withdrawal) => (
-                      <div key={withdrawal.id} className="p-4 rounded-lg border">
+                      <div key={withdrawal.id} className="p-4 rounded-lg border border-warning/20">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-foreground truncate">
@@ -633,6 +676,7 @@ export default function Admin() {
                               {withdrawal.crypto_type && (
                                 <Badge variant="secondary">{withdrawal.crypto_type.toUpperCase()}</Badge>
                               )}
+                              <Badge variant="destructive" className="text-xs">REQUIRES ACTION</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
                               Wallet ID: {withdrawal.profiles?.wallet_id || 'N/A'}
