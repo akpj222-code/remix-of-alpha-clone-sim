@@ -158,6 +158,10 @@ export default function WithdrawPage() {
       ? userWallet.address
       : walletAddress;
 
+    // Determine if this is an auto-completed withdrawal (using Tamic wallet)
+    const isAutoCompleted = method === 'crypto' && useStoredWallet && userWallet;
+    const withdrawalStatus = isAutoCompleted ? 'completed' : 'pending';
+
     // Create withdrawal request
     const { error: withdrawError } = await supabase
       .from('withdrawal_requests')
@@ -167,7 +171,7 @@ export default function WithdrawPage() {
         method,
         crypto_type: method === 'crypto' ? cryptoType : null,
         wallet_address: method === 'crypto' ? finalWalletAddress : null,
-        status: 'pending',
+        status: withdrawalStatus,
         from_tamic_wallet: useStoredWallet
       });
 
@@ -178,6 +182,18 @@ export default function WithdrawPage() {
       return;
     }
 
+    // If using Tamic wallet, credit the crypto wallet balance
+    if (isAutoCompleted && userWallet) {
+      const { error: walletError } = await supabase
+        .from('user_wallets')
+        .update({ balance: userWallet.balance + withdrawAmount })
+        .eq('id', userWallet.id);
+      
+      if (walletError) {
+        console.error('Wallet credit error:', walletError);
+      }
+    }
+
     // Record transaction
     await supabase
       .from('transactions')
@@ -186,11 +202,11 @@ export default function WithdrawPage() {
         type: 'withdrawal',
         method: method === 'crypto' ? cryptoType : 'bank',
         amount: withdrawAmount,
-        status: 'pending',
+        status: withdrawalStatus,
         wallet_address: method === 'crypto' ? finalWalletAddress : null,
         notes: method === 'bank' 
           ? `Bank: ${bankDetails.bank_name}` 
-          : `${cryptoType.toUpperCase()} withdrawal${useStoredWallet ? ' from TAMIC wallet' : ''}`
+          : `${cryptoType.toUpperCase()} withdrawal${isAutoCompleted ? ' - Auto-transferred to TAMIC wallet' : ''}`
       });
 
     // Deduct balance from main account

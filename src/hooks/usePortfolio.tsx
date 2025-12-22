@@ -8,6 +8,7 @@ export interface PortfolioItem {
   company_name: string;
   shares: number;
   average_price: number;
+  isTamg?: boolean;
 }
 
 export interface Trade {
@@ -31,18 +32,43 @@ export function usePortfolio() {
   const fetchPortfolio = useCallback(async () => {
     if (!user) return;
     
-    const { data, error } = await supabase
+    // Fetch regular stock portfolio
+    const { data: stocksData, error: stocksError } = await supabase
       .from('portfolios')
       .select('*')
       .eq('user_id', user.id);
     
-    if (!error && data) {
-      setPortfolio(data.map(item => ({
+    // Fetch TAMG holdings
+    const { data: tamgData, error: tamgError } = await supabase
+      .from('tamg_holdings')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    const portfolioItems: PortfolioItem[] = [];
+    
+    if (!stocksError && stocksData) {
+      portfolioItems.push(...stocksData.map(item => ({
         ...item,
         shares: Number(item.shares),
-        average_price: Number(item.average_price)
+        average_price: Number(item.average_price),
+        isTamg: false
       })));
     }
+    
+    // Add TAMG if user has holdings
+    if (!tamgError && tamgData && Number(tamgData.shares) > 0) {
+      portfolioItems.push({
+        id: tamgData.id,
+        symbol: 'TAMG',
+        company_name: 'TAMIC GROUP Shares',
+        shares: Number(tamgData.shares),
+        average_price: Number(tamgData.average_price),
+        isTamg: true
+      });
+    }
+    
+    setPortfolio(portfolioItems);
   }, [user]);
 
   const fetchTrades = useCallback(async () => {
