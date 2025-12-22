@@ -15,19 +15,54 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { TradeModal } from '@/components/stocks/TradeModal';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { useStocks, Stock } from '@/hooks/useStocks';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 export default function Portfolio() {
   const { portfolio, trades } = usePortfolio();
   const { stocks, fetchStocks, getStock } = useStocks();
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [tamgPrice, setTamgPrice] = useState<number>(25);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchStocks();
+    fetchTamgPrice();
   }, [fetchStocks]);
 
+  const fetchTamgPrice = async () => {
+    const { data } = await supabase
+      .from('admin_settings')
+      .select('setting_value')
+      .eq('setting_key', 'tamg_share_price')
+      .maybeSingle();
+    
+    if (data) {
+      setTamgPrice(parseFloat(data.setting_value) || 25);
+    }
+  };
+
   const portfolioWithPrices = portfolio.map((item) => {
+    // For TAMG, use the fetched price from admin_settings
+    if (item.isTamg) {
+      const currentPrice = tamgPrice;
+      const currentValue = item.shares * currentPrice;
+      const costBasis = item.shares * item.average_price;
+      const unrealizedPL = currentValue - costBasis;
+      const unrealizedPLPercent = costBasis > 0 ? (unrealizedPL / costBasis) * 100 : 0;
+      
+      return {
+        ...item,
+        currentPrice,
+        currentValue,
+        unrealizedPL,
+        unrealizedPLPercent,
+      };
+    }
+    
+    // For regular stocks
     const stock = getStock(item.symbol);
     const currentPrice = stock?.price || item.average_price;
     const currentValue = item.shares * currentPrice;
@@ -47,7 +82,12 @@ export default function Portfolio() {
   const totalValue = portfolioWithPrices.reduce((sum, item) => sum + item.currentValue, 0);
   const totalPL = portfolioWithPrices.reduce((sum, item) => sum + item.unrealizedPL, 0);
 
-  const handleTrade = (symbol: string) => {
+  const handleTrade = (symbol: string, isTamg?: boolean) => {
+    if (isTamg) {
+      // For TAMG, navigate to dashboard where the TAMG card is
+      navigate('/dashboard');
+      return;
+    }
     const stock = getStock(symbol);
     if (stock) {
       setSelectedStock(stock);
@@ -169,8 +209,8 @@ export default function Portfolio() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" onClick={() => handleTrade(item.symbol)}>
-                            Trade
+                          <Button size="sm" onClick={() => handleTrade(item.symbol, item.isTamg)}>
+                            {item.isTamg ? 'Buy More' : 'Trade'}
                           </Button>
                         </TableCell>
                       </TableRow>

@@ -74,15 +74,27 @@ export function usePortfolio() {
   const fetchTrades = useCallback(async () => {
     if (!user) return;
     
-    const { data, error } = await supabase
+    // Fetch regular stock trades
+    const { data: stockTrades, error: stockError } = await supabase
       .from('trades')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
     
-    if (!error && data) {
-      setTrades(data.map(trade => ({
+    // Fetch TAMG purchases from transactions
+    const { data: tamgTrades, error: tamgError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('type', 'tamg_purchase')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    const allTrades: Trade[] = [];
+    
+    if (!stockError && stockTrades) {
+      allTrades.push(...stockTrades.map(trade => ({
         ...trade,
         trade_type: trade.trade_type as 'buy' | 'sell',
         shares: Number(trade.shares),
@@ -91,6 +103,34 @@ export function usePortfolio() {
         fee: Number(trade.fee)
       })));
     }
+    
+    // Convert TAMG transactions to trade format
+    if (!tamgError && tamgTrades) {
+      tamgTrades.forEach(tx => {
+        // Parse notes to extract shares and price: "Purchased X TAMG shares at $Y.YY"
+        const match = tx.notes?.match(/Purchased (\d+) TAMG shares at \$(\d+\.?\d*)/);
+        if (match) {
+          const shares = parseInt(match[1]);
+          const pricePerShare = parseFloat(match[2]);
+          allTrades.push({
+            id: tx.id,
+            symbol: 'TAMG',
+            company_name: 'TAMIC GROUP Shares',
+            trade_type: 'buy',
+            shares: shares,
+            price_per_share: pricePerShare,
+            total_amount: Number(tx.amount),
+            fee: 0,
+            created_at: tx.created_at
+          });
+        }
+      });
+    }
+    
+    // Sort by created_at descending
+    allTrades.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    setTrades(allTrades);
   }, [user]);
 
   useEffect(() => {

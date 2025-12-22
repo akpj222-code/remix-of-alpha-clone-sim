@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart } from 'lucide-react';
+import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart, ArrowUpToLine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,7 +61,14 @@ interface WithdrawalRequest {
   status: string;
   created_at: string;
   from_tamic_wallet: boolean | null;
-  profiles?: { email: string; full_name: string | null; wallet_id: string | null } | null;
+  profiles?: { 
+    email: string; 
+    full_name: string | null; 
+    wallet_id: string | null;
+    bank_name: string | null;
+    bank_account_number: string | null;
+    bank_account_name: string | null;
+  } | null;
 }
 
 interface Transaction {
@@ -177,7 +184,7 @@ export default function Admin() {
       .from('withdrawal_requests')
       .select(`
         *,
-        profiles:user_id (email, full_name, wallet_id)
+        profiles:user_id (email, full_name, wallet_id, bank_name, bank_account_number, bank_account_name)
       `)
       .order('created_at', { ascending: false });
 
@@ -377,6 +384,7 @@ export default function Admin() {
   const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending' && !w.from_tamic_wallet);
   const autoCompletedWithdrawals = withdrawals.filter(w => w.status === 'completed' && w.from_tamic_wallet);
   const pendingTransactions = transactions.filter(t => t.status === 'pending');
+  const pendingDeposits = transactions.filter(t => t.type === 'deposit' && t.status === 'pending');
 
   return (
     <AppLayout>
@@ -404,6 +412,15 @@ export default function Admin() {
               {pendingWithdrawals.length > 0 && (
                 <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
                   {pendingWithdrawals.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="deposits" className="gap-2">
+              <ArrowUpToLine className="h-4 w-4" />
+              <span className="hidden sm:inline">Deposits</span>
+              {pendingDeposits.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {pendingDeposits.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -679,12 +696,25 @@ export default function Admin() {
                               <Badge variant="destructive" className="text-xs">REQUIRES ACTION</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Wallet ID: {withdrawal.profiles?.wallet_id || 'N/A'}
+                              User Wallet ID: {withdrawal.profiles?.wallet_id || 'N/A'}
                             </p>
-                            {withdrawal.wallet_address && (
-                              <p className="text-xs font-mono text-muted-foreground mt-1 break-all">
-                                To: {withdrawal.wallet_address}
-                              </p>
+                            
+                            {/* Bank Details for bank withdrawals */}
+                            {withdrawal.method === 'bank' && (
+                              <div className="mt-2 p-2 bg-muted/50 rounded text-xs space-y-1">
+                                <p className="font-medium text-foreground">Bank Details:</p>
+                                <p className="text-muted-foreground">Bank: {withdrawal.profiles?.bank_name || 'N/A'}</p>
+                                <p className="text-muted-foreground">Account Name: {withdrawal.profiles?.bank_account_name || 'N/A'}</p>
+                                <p className="font-mono text-muted-foreground">Account #: {withdrawal.profiles?.bank_account_number || 'N/A'}</p>
+                              </div>
+                            )}
+                            
+                            {/* Crypto address for crypto withdrawals */}
+                            {withdrawal.method === 'crypto' && withdrawal.wallet_address && (
+                              <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
+                                <p className="font-medium text-foreground">Send {withdrawal.crypto_type?.toUpperCase()} to:</p>
+                                <p className="font-mono text-muted-foreground break-all">{withdrawal.wallet_address}</p>
+                              </div>
                             )}
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -747,6 +777,111 @@ export default function Admin() {
                       </Badge>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Deposits Tab */}
+          <TabsContent value="deposits" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowUpToLine className="h-5 w-5 text-success" />
+                  Pending Deposit Requests
+                </CardTitle>
+                <CardDescription>
+                  Review user deposits. Look for their Wallet ID (e.g., TG-XXXXXXXX) in your bank or crypto transaction reference to verify payment.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingDeposits.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No pending deposits</p>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingDeposits.map((deposit) => (
+                      <div key={deposit.id} className="p-4 rounded-lg border border-success/20">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground truncate">
+                              {deposit.profiles?.full_name || deposit.profiles?.email}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">{deposit.profiles?.email}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <Badge variant="outline">{deposit.type.toUpperCase()}</Badge>
+                              {deposit.method && <Badge variant="secondary">{deposit.method.toUpperCase()}</Badge>}
+                            </div>
+                            {deposit.notes && (
+                              <p className="text-xs text-muted-foreground mt-2 break-all">
+                                Notes: {deposit.notes}
+                              </p>
+                            )}
+                            <div className="mt-2 p-2 bg-primary/5 border border-primary/20 rounded text-xs">
+                              <p className="font-medium text-foreground">Check for this reference in your transactions:</p>
+                              <p className="text-muted-foreground">User should have included their Wallet ID in payment reference</p>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-xl font-bold text-foreground">
+                              ${deposit.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(deposit.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-4 flex-wrap">
+                          <Button 
+                            size="sm" 
+                            className="bg-success hover:bg-success/90"
+                            onClick={() => handleTransactionAction(deposit.id, 'completed')}
+                          >
+                            Confirm & Credit User
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleTransactionAction(deposit.id, 'failed')}
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>All Deposit History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {transactions.filter(t => t.type === 'deposit').map((deposit) => (
+                    <div key={deposit.id} className="flex items-center justify-between p-3 rounded-lg border gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground truncate">
+                          {deposit.profiles?.full_name || deposit.profiles?.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          ${deposit.amount.toFixed(2)} - {deposit.method || 'Unknown method'}
+                        </p>
+                      </div>
+                      <Badge className={cn(
+                        'flex-shrink-0',
+                        deposit.status === 'completed' && 'bg-success/10 text-success',
+                        deposit.status === 'pending' && 'bg-warning/10 text-warning',
+                        deposit.status === 'failed' && 'bg-destructive/10 text-destructive'
+                      )}>
+                        {deposit.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                  {transactions.filter(t => t.type === 'deposit').length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No deposit history</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
