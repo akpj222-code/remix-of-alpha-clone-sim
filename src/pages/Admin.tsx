@@ -80,7 +80,7 @@ interface Transaction {
   status: string;
   created_at: string;
   notes: string | null;
-  profiles?: { email: string; full_name: string | null } | null;
+  profiles?: { email: string; full_name: string | null; wallet_id: string | null } | null;
 }
 
 interface Stats {
@@ -198,7 +198,7 @@ export default function Admin() {
       .from('transactions')
       .select(`
         *,
-        profiles:user_id (email, full_name)
+        profiles:user_id (email, full_name, wallet_id)
       `)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -381,8 +381,10 @@ export default function Admin() {
   );
 
   const pendingRequests = kycRequests.filter(k => k.status === 'pending');
-  const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending' && !w.from_tamic_wallet);
-  const autoCompletedWithdrawals = withdrawals.filter(w => w.status === 'completed' && w.from_tamic_wallet);
+  // Pending withdrawals: all pending ones that are NOT auto-completed TAMIC wallet transfers
+  const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending' && w.from_tamic_wallet !== true);
+  // Auto-completed: completed ones that used TAMIC wallet
+  const autoCompletedWithdrawals = withdrawals.filter(w => w.status === 'completed' && w.from_tamic_wallet === true);
   const pendingTransactions = transactions.filter(t => t.status === 'pending');
   const pendingDeposits = transactions.filter(t => t.type === 'deposit' && t.status === 'pending');
 
@@ -816,9 +818,10 @@ export default function Admin() {
                                 Notes: {deposit.notes}
                               </p>
                             )}
-                            <div className="mt-2 p-2 bg-primary/5 border border-primary/20 rounded text-xs">
-                              <p className="font-medium text-foreground">Check for this reference in your transactions:</p>
-                              <p className="text-muted-foreground">User should have included their Wallet ID in payment reference</p>
+                            <div className="mt-2 p-2 bg-primary/5 border border-primary/20 rounded text-xs space-y-1">
+                              <p className="font-medium text-foreground">User Wallet ID:</p>
+                              <p className="font-mono font-bold text-primary">{deposit.profiles?.wallet_id || 'N/A'}</p>
+                              <p className="text-muted-foreground text-[10px]">Search for this ID in your bank/crypto transactions to verify payment</p>
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">

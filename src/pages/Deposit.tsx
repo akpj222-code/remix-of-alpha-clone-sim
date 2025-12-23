@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Wallet, Building2, Copy, Check, Loader2 } from 'lucide-react';
+import { Wallet, Building2, Copy, Check, Loader2, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
@@ -24,6 +26,7 @@ interface DepositDetails {
 
 export default function Deposit() {
   const { profile } = useProfile();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [method, setMethod] = useState<DepositMethod>('bank');
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('BTC');
@@ -31,6 +34,8 @@ export default function Deposit() {
   const [depositDetails, setDepositDetails] = useState<DepositDetails | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [depositAmount, setDepositAmount] = useState<string>('');
+  const [submittingDeposit, setSubmittingDeposit] = useState(false);
 
   const getRandomLoadTime = () => {
     const times = [2000, 3000, 4000, 5000, 7000, 10000];
@@ -117,6 +122,42 @@ export default function Deposit() {
     setCopied(label);
     toast({ title: 'Copied', description: `${label} copied to clipboard` });
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleDepositNotification = async () => {
+    if (!user) {
+      toast({ title: 'Error', description: 'Please log in first', variant: 'destructive' });
+      return;
+    }
+
+    const amount = parseFloat(depositAmount);
+    if (!depositAmount || isNaN(amount) || amount <= 0) {
+      toast({ title: 'Error', description: 'Please enter a valid deposit amount', variant: 'destructive' });
+      return;
+    }
+
+    setSubmittingDeposit(true);
+
+    const { error } = await supabase.from('transactions').insert({
+      user_id: user.id,
+      type: 'deposit',
+      method: method === 'bank' ? 'bank' : selectedCrypto.toLowerCase(),
+      amount: amount,
+      status: 'pending',
+      notes: `User initiated ${method === 'bank' ? 'bank transfer' : selectedCrypto + ' crypto'} deposit. Wallet ID: ${profile?.wallet_id || 'N/A'}`,
+    });
+
+    setSubmittingDeposit(false);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to notify admin. Please try again.', variant: 'destructive' });
+    } else {
+      toast({ 
+        title: 'Success', 
+        description: 'Admin has been notified of your deposit. Your balance will be updated once payment is verified.' 
+      });
+      setDepositAmount('');
+    }
   };
 
   const CopyButton = ({ text, label }: { text: string; label: string }) => (
@@ -252,6 +293,33 @@ export default function Deposit() {
                         Include your Wallet ID ({profile?.wallet_id}) in the transfer reference for faster processing.
                       </p>
                     </div>
+
+                    {/* I Have Deposited Section */}
+                    <div className="p-4 bg-success/5 border border-success/20 rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-foreground">Already made your deposit?</p>
+                      <p className="text-xs text-muted-foreground">Enter the amount you deposited and click the button below to notify our team for faster processing.</p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Amount (USD)"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={handleDepositNotification}
+                          disabled={submittingDeposit || !depositAmount}
+                          className="gap-2"
+                        >
+                          {submittingDeposit ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          I Have Deposited
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </CardContent>
@@ -328,6 +396,33 @@ export default function Deposit() {
                       <p className="text-xs text-muted-foreground">
                         • Your balance will be credited at current market rate
                       </p>
+                    </div>
+
+                    {/* I Have Deposited Section */}
+                    <div className="p-4 bg-success/5 border border-success/20 rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-foreground">Already sent your crypto?</p>
+                      <p className="text-xs text-muted-foreground">Enter the USD equivalent and click the button below to notify our team for faster processing.</p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Amount (USD)"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={handleDepositNotification}
+                          disabled={submittingDeposit || !depositAmount}
+                          className="gap-2"
+                        >
+                          {submittingDeposit ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          I Have Deposited
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (
