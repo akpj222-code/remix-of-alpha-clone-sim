@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart, ArrowUpToLine } from 'lucide-react';
+import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart, ArrowUpToLine, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -118,6 +118,7 @@ export default function Admin() {
   const [showKYCDetailsDialog, setShowKYCDetailsDialog] = useState(false);
   const [showUserEditDialog, setShowUserEditDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [fundAmount, setFundAmount] = useState('');
   const [fundAction, setFundAction] = useState<'add' | 'remove'>('add');
@@ -138,6 +139,19 @@ export default function Admin() {
   });
   const { toast } = useToast();
 
+  const refreshAllData = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchData(),
+      fetchUsers(),
+      fetchAdminSettings(),
+      fetchWithdrawals(),
+      fetchTransactions()
+    ]);
+    setRefreshing(false);
+    toast({ title: 'Refreshed', description: 'All data has been refreshed' });
+  };
+
   useEffect(() => {
     fetchData();
     fetchUsers();
@@ -147,22 +161,43 @@ export default function Admin() {
   }, []);
 
   const fetchData = async () => {
+    console.log('Fetching KYC data...');
     const { data: kyc, error } = await supabase
       .from('kyc_requests')
-      .select(`
-        *,
-        profiles:user_id (email)
-      `)
+      .select('*')
       .order('submitted_at', { ascending: false });
 
-    if (!error && kyc) {
-      setKycRequests(kyc as unknown as KYCRequestWithProfile[]);
+    console.log('KYC result:', { kyc, error });
+
+    if (error) {
+      console.error('KYC error:', error);
+      toast({ title: 'Error fetching KYC', description: error.message, variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+
+    if (kyc && kyc.length > 0) {
+      // Fetch profiles separately for each KYC request
+      const kycWithProfiles = await Promise.all(
+        kyc.map(async (k) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', k.user_id)
+            .maybeSingle();
+          return { ...k, profiles: profileData };
+        })
+      );
+      setKycRequests(kycWithProfiles as unknown as KYCRequestWithProfile[]);
       
       const total = kyc.length;
       const pending = kyc.filter(k => k.status === 'pending').length;
       const approved = kyc.filter(k => k.status === 'approved').length;
       const rejected = kyc.filter(k => k.status === 'rejected').length;
       setStats({ total, pending, approved, rejected });
+    } else {
+      setKycRequests([]);
+      setStats({ total: 0, pending: 0, approved: 0, rejected: 0 });
     }
     
     setLoading(false);
@@ -180,31 +215,69 @@ export default function Admin() {
   };
 
   const fetchWithdrawals = async () => {
+    console.log('Fetching withdrawals...');
     const { data, error } = await supabase
       .from('withdrawal_requests')
-      .select(`
-        *,
-        profiles:user_id (email, full_name, wallet_id, bank_name, bank_account_number, bank_account_name)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setWithdrawals(data as unknown as WithdrawalRequest[]);
+    console.log('Withdrawals result:', { data, error });
+
+    if (error) {
+      console.error('Withdrawals error:', error);
+      toast({ title: 'Error fetching withdrawals', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    if (data && data.length > 0) {
+      // Fetch profiles separately for each withdrawal
+      const withdrawalsWithProfiles = await Promise.all(
+        data.map(async (w) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email, full_name, wallet_id, bank_name, bank_account_number, bank_account_name')
+            .eq('id', w.user_id)
+            .maybeSingle();
+          return { ...w, profiles: profileData };
+        })
+      );
+      setWithdrawals(withdrawalsWithProfiles as unknown as WithdrawalRequest[]);
+    } else {
+      setWithdrawals([]);
     }
   };
 
   const fetchTransactions = async () => {
+    console.log('Fetching transactions...');
     const { data, error } = await supabase
       .from('transactions')
-      .select(`
-        *,
-        profiles:user_id (email, full_name, wallet_id)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (!error && data) {
-      setTransactions(data as unknown as Transaction[]);
+    console.log('Transactions result:', { data, error });
+
+    if (error) {
+      console.error('Transactions error:', error);
+      toast({ title: 'Error fetching transactions', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    if (data && data.length > 0) {
+      // Fetch profiles separately for each transaction
+      const transactionsWithProfiles = await Promise.all(
+        data.map(async (t) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email, full_name, wallet_id')
+            .eq('id', t.user_id)
+            .maybeSingle();
+          return { ...t, profiles: profileData };
+        })
+      );
+      setTransactions(transactionsWithProfiles as unknown as Transaction[]);
+    } else {
+      setTransactions([]);
     }
   };
 
@@ -391,11 +464,23 @@ export default function Admin() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
-          <p className="text-muted-foreground">
-            Manage users, KYC applications, and platform settings
-          </p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+            <p className="text-muted-foreground">
+              Manage users, KYC applications, and platform settings
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshAllData}
+            disabled={refreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            Refresh
+          </Button>
         </div>
 
         <Tabs defaultValue="kyc" className="space-y-6">
