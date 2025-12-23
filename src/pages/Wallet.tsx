@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Wallet, Copy, Check, Plus, Bitcoin, DollarSign, PoundSterling, Euro, ArrowDownToLine } from 'lucide-react';
+import { Wallet, Copy, Check, Plus, Bitcoin, DollarSign, PoundSterling, Euro, ArrowDownToLine, ArrowUpToLine, Clock, CheckCircle2, XCircle, History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +10,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  status: string;
+  method: string | null;
+  created_at: string;
+  notes: string | null;
+}
 
 interface UserWallet {
   id: string;
@@ -22,12 +33,14 @@ export default function WalletPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [wallets, setWallets] = useState<UserWallet[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchWallets();
+      fetchTransactions();
     }
   }, [user]);
 
@@ -42,6 +55,57 @@ export default function WalletPage() {
     if (!error && data) {
       setWallets(data.map(w => ({ ...w, balance: Number(w.balance) || 0 })));
     }
+  };
+
+  const fetchTransactions = async () => {
+    if (!user) return;
+    
+    // Fetch both deposits and withdrawals
+    const { data: txData } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    // Also fetch withdrawal_requests 
+    const { data: withdrawalData } = await supabase
+      .from('withdrawal_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    const allTransactions: Transaction[] = [];
+    
+    if (txData) {
+      allTransactions.push(...txData.map(t => ({
+        id: t.id,
+        type: t.type,
+        amount: Number(t.amount),
+        status: t.status,
+        method: t.method,
+        created_at: t.created_at,
+        notes: t.notes
+      })));
+    }
+    
+    if (withdrawalData) {
+      allTransactions.push(...withdrawalData.map(w => ({
+        id: w.id,
+        type: 'withdrawal',
+        amount: Number(w.amount),
+        status: w.status,
+        method: w.method,
+        created_at: w.created_at,
+        notes: w.crypto_type ? `${w.crypto_type.toUpperCase()} to ${w.wallet_address?.slice(0, 10)}...` : 'Bank withdrawal'
+      })));
+    }
+    
+    // Sort by date
+    allTransactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    setTransactions(allTransactions);
   };
 
   const generateWalletAddress = (currency: string): string => {
@@ -310,6 +374,77 @@ export default function WalletPage() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        {/* Transaction History */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <History className="h-5 w-5" />
+              Transaction History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        tx.type === 'deposit' || tx.type === 'tamg_purchase' 
+                          ? 'bg-success/10' 
+                          : 'bg-destructive/10'
+                      }`}>
+                        {tx.type === 'deposit' ? (
+                          <ArrowUpToLine className="h-5 w-5 text-success" />
+                        ) : (
+                          <ArrowDownToLine className="h-5 w-5 text-destructive" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground capitalize">
+                          {tx.type === 'tamg_purchase' ? 'TAMG Purchase' : tx.type}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleDateString()} • {tx.method || 'N/A'}
+                        </p>
+                        {tx.notes && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {tx.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold ${
+                        tx.type === 'deposit' ? 'text-success' : 'text-destructive'
+                      }`}>
+                        {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </p>
+                      <Badge variant={
+                        tx.status === 'completed' ? 'default' :
+                        tx.status === 'pending' ? 'secondary' : 'destructive'
+                      } className="text-xs">
+                        {tx.status === 'completed' ? (
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        ) : tx.status === 'pending' ? (
+                          <Clock className="h-3 w-3 mr-1" />
+                        ) : (
+                          <XCircle className="h-3 w-3 mr-1" />
+                        )}
+                        {tx.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
