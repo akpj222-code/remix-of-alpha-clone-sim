@@ -219,7 +219,16 @@ export default function Auth() {
                       <FormItem>
                         <FormLabel className="text-foreground">Email Address</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Enter your email" className="bg-card border-border h-12 rounded-lg" {...field} />
+                          <Input 
+                            type="email" 
+                            placeholder="Enter your email" 
+                            className="bg-card border-border h-12 rounded-lg" 
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            autoComplete="email"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
