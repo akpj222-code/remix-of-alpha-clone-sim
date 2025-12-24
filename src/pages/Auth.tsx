@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, User, Building2, ChevronLeft, Eye, EyeOff } from 'lucide-react';
+import { Loader2, User, Building2, ChevronLeft, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -26,8 +27,22 @@ const signUpSchema = signInSchema.extend({
   path: ["confirmPassword"],
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 type SignInValues = z.infer<typeof signInSchema>;
 type SignUpValues = z.infer<typeof signUpSchema>;
+type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -36,16 +51,33 @@ export default function Auth() {
   const [accountType, setAccountType] = useState<'individual' | 'corporate'>('individual');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [view, setView] = useState<'signin' | 'signup' | 'forgot-password' | 'reset-password'>('signin');
   
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Check if this is a password reset callback
   useEffect(() => {
-    if (user) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    if (type === 'recovery') {
+      setView('reset-password');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && view !== 'reset-password') {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, view]);
+
+  useEffect(() => {
+    if (searchParams.get('mode') === 'signup') {
+      setView('signup');
+      setIsSignUp(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isSignUp) {
@@ -63,6 +95,16 @@ export default function Auth() {
   const signUpForm = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { email: '', password: '', confirmPassword: '', fullName: '', phone: '' },
+  });
+
+  const forgotPasswordForm = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  });
+
+  const resetPasswordForm = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: '', confirmPassword: '' },
   });
 
   const handleSignIn = async (values: SignInValues) => {
@@ -101,6 +143,170 @@ export default function Auth() {
       });
     }
   };
+
+  const handleForgotPassword = async (values: ForgotPasswordValues) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Check your email',
+        description: 'We sent you a password reset link. Please check your inbox.',
+      });
+      setView('signin');
+    }
+  };
+
+  const handleResetPassword = async (values: ResetPasswordValues) => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      password: values.password,
+    });
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been reset successfully. You can now sign in.',
+      });
+      // Clear hash and redirect to sign in
+      window.location.hash = '';
+      setView('signin');
+    }
+  };
+
+  // Forgot Password View
+  if (view === 'forgot-password') {
+    return (
+      <div className="min-h-screen flex flex-col items-center bg-muted/30 p-4">
+        <div className="w-full max-w-md mt-8 mb-6">
+          <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => setView('signin')}>
+            <ArrowLeft className="h-5 w-5 mr-2 text-primary" />
+            <span className="text-primary">Back to Login</span>
+          </Button>
+        </div>
+
+        <div className="w-full max-w-md">
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="text-center px-0">
+              <CardTitle className="text-2xl font-bold text-foreground">Forgot Password</CardTitle>
+              <CardDescription>
+                Enter your email address and we'll send you a link to reset your password.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-0">
+              <Form {...forgotPasswordForm}>
+                <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-6">
+                  <FormField
+                    control={forgotPasswordForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">Email Address</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="Enter your email" className="bg-card border-border h-12 rounded-lg" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full h-12 rounded-xl text-md font-medium" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Send Reset Link
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Reset Password View (after clicking email link)
+  if (view === 'reset-password') {
+    return (
+      <div className="min-h-screen flex flex-col items-center bg-muted/30 p-4">
+        <div className="w-full max-w-md mt-8 mb-6" />
+
+        <div className="w-full max-w-md">
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="text-center px-0">
+              <CardTitle className="text-2xl font-bold text-foreground">Reset Password</CardTitle>
+              <CardDescription>
+                Enter your new password below.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-0">
+              <Form {...resetPasswordForm}>
+                <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-6">
+                  <FormField
+                    control={resetPasswordForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">New Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input 
+                              type={showPassword ? "text" : "password"} 
+                              placeholder="Enter new password" 
+                              className="bg-card border-border h-12 rounded-lg pr-10" 
+                              {...field} 
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            >
+                              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={resetPasswordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground">Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Confirm new password" className="bg-card border-border h-12 rounded-lg" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full h-12 rounded-xl text-md font-medium" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Update Password
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-muted/30 p-4">
@@ -163,7 +369,7 @@ export default function Auth() {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Have an account?{' '}
-                <button onClick={() => setIsSignUp(false)} className="text-primary font-bold hover:underline">
+                <button onClick={() => { setIsSignUp(false); setView('signin'); }} className="text-primary font-bold hover:underline">
                   Login
                 </button>
               </p>
@@ -282,7 +488,16 @@ export default function Auth() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-foreground">Password</FormLabel>
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-foreground">Password</FormLabel>
+                            <button
+                              type="button"
+                              onClick={() => setView('forgot-password')}
+                              className="text-sm text-primary hover:underline"
+                            >
+                              Forgot Password?
+                            </button>
+                          </div>
                           <FormControl>
                             <div className="relative">
                               <Input 
@@ -320,7 +535,7 @@ export default function Auth() {
                   <button
                     type="button"
                     className="text-primary font-bold hover:underline"
-                    onClick={() => setIsSignUp(!isSignUp)}
+                    onClick={() => { setIsSignUp(!isSignUp); setView(isSignUp ? 'signin' : 'signup'); }}
                   >
                     {isSignUp ? 'Login' : 'Sign Up'}
                   </button>
