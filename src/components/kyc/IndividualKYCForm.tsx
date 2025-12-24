@@ -98,7 +98,8 @@ export function IndividualKYCForm() {
       if (error) throw error;
 
       toast({ title: 'Success', description: 'KYC application submitted successfully' });
-      window.location.reload();
+      // Use navigation instead of reload to avoid 404 on Vercel
+      window.location.href = '/kyc';
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {

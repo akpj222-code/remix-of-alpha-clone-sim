@@ -20,7 +20,6 @@ const signInSchema = z.object({
 const signUpSchema = signInSchema.extend({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().optional(),
-  bvn: z.string().optional(),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -63,7 +62,7 @@ export default function Auth() {
 
   const signUpForm = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '', fullName: '', phone: '', bvn: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '', fullName: '', phone: '' },
   });
 
   const handleSignIn = async (values: SignInValues) => {
@@ -186,20 +185,6 @@ export default function Auth() {
               {isSignUp ? (
                 <Form {...signUpForm}>
                   <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
-                    <FormField
-                      control={signUpForm.control}
-                      name="bvn"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-foreground">BVN <span className="text-destructive">*</span></FormLabel>
-                          <FormControl>
-                            <Input placeholder="12345678901" className="bg-card border-border h-12 rounded-lg" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
                     <FormField
                       control={signUpForm.control}
                       name="fullName"

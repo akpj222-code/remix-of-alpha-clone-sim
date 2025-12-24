@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 const companyInfoSchema = z.object({
   company_name: z.string().min(2, 'Company name is required'),
   incorporation_date: z.string().min(1, 'Incorporation date is required'),
-  registration_number: z.string().min(1, 'Registration number is required'),
   signatory_name: z.string().min(2, 'Signatory name is required'),
 });
 
@@ -41,7 +40,7 @@ export function CorporateKYCForm() {
 
   const companyInfoForm = useForm({
     resolver: zodResolver(companyInfoSchema),
-    defaultValues: companyInfo || { company_name: '', incorporation_date: '', registration_number: '', signatory_name: '' },
+    defaultValues: companyInfo || { company_name: '', incorporation_date: '', signatory_name: '' },
   });
 
   const companyDetailsForm = useForm({
@@ -104,7 +103,8 @@ export function CorporateKYCForm() {
       if (error) throw error;
 
       toast({ title: 'Success', description: 'KYC application submitted successfully' });
-      window.location.reload();
+      // Use navigation instead of reload to avoid 404 on Vercel
+      window.location.href = '/kyc';
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -176,19 +176,6 @@ export function CorporateKYCForm() {
                       <FormLabel>Date of Incorporation</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={companyInfoForm.control}
-                  name="registration_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Number (RC)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="RC123456" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
