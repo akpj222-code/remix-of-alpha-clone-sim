@@ -32,8 +32,23 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate('/');
   };
 
+  // Branding letters configuration
+  const brandingLetters = [
+    { char: 'I', from: 'from-cyan-400', to: 'to-pink-500' },     // Light Blue & Pinkish Red
+    { char: 'C', from: 'from-red-500', to: 'to-yellow-400' },    // Red & Yellow
+    { char: 'A', from: 'from-green-400', to: 'to-blue-500' },    // Green & Blue
+    { char: 'R', from: 'from-purple-500', to: 'to-pink-400' },   // Purple & Pink
+    { char: 'U', from: 'from-orange-400', to: 'to-red-500' },    // Orange & Red
+    { char: 'S', from: 'from-indigo-400', to: 'to-cyan-400' },   // Indigo & Cyan
+    { char: 'T', from: 'from-pink-500', to: 'to-rose-600' },     // Pink & Rose
+    { char: 'U', from: 'from-yellow-400', to: 'to-orange-500' }, // Yellow & Orange
+    { char: 'D', from: 'from-blue-400', to: 'to-violet-500' },   // Blue & Violet
+    { char: 'I', from: 'from-teal-400', to: 'to-emerald-500' },  // Teal & Emerald
+    { char: 'O', from: 'from-fuchsia-500', to: 'to-purple-600' },// Fuchsia & Purple
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="container flex h-16 items-center justify-between">
@@ -99,7 +114,29 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       </nav>
 
-      <main className="container py-6 pb-24 lg:pb-6">{children}</main>
+      {/* Main Content - Flex-1 pushes footer down */}
+      <main className="container py-6 flex-1">{children}</main>
+
+      {/* Footer with ICARUSTUDIO Branding */}
+      <footer className="w-full py-6 pb-24 lg:pb-6 text-center border-t bg-card/30">
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Powered by</span>
+          <div className="flex select-none">
+            {brandingLetters.map((l, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "text-lg font-black bg-gradient-to-br bg-clip-text text-transparent hover:scale-110 transition-transform cursor-default",
+                  l.from,
+                  l.to
+                )}
+              >
+                {l.char}
+              </span>
+            ))}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
