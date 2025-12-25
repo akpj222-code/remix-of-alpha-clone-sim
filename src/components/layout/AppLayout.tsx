@@ -32,21 +32,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate('/');
   };
 
-  // Branding letters configuration
-  const brandingLetters = [
-    { char: 'I', from: 'from-cyan-400', to: 'to-pink-500' },     // Light Blue & Pinkish Red
-    { char: 'C', from: 'from-red-500', to: 'to-yellow-400' },    // Red & Yellow
-    { char: 'A', from: 'from-green-400', to: 'to-blue-500' },    // Green & Blue
-    { char: 'R', from: 'from-purple-500', to: 'to-pink-400' },   // Purple & Pink
-    { char: 'U', from: 'from-orange-400', to: 'to-red-500' },    // Orange & Red
-    { char: 'S', from: 'from-indigo-400', to: 'to-cyan-400' },   // Indigo & Cyan
-    { char: 'T', from: 'from-pink-500', to: 'to-rose-600' },     // Pink & Rose
-    { char: 'U', from: 'from-yellow-400', to: 'to-orange-500' }, // Yellow & Orange
-    { char: 'D', from: 'from-blue-400', to: 'to-violet-500' },   // Blue & Violet
-    { char: 'I', from: 'from-teal-400', to: 'to-emerald-500' },  // Teal & Emerald
-    { char: 'O', from: 'from-fuchsia-500', to: 'to-purple-600' },// Fuchsia & Purple
-  ];
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -117,24 +102,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main className="container py-6 flex-1">{children}</main>
 
-      {/* Footer with Smaller ICARUSTUDIO Branding */}
+      {/* Footer - Minimal & Subtle */}
       <footer className="w-full py-6 pb-24 lg:pb-6 text-center border-t bg-card/30">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Powered by</span>
-          <div className="flex select-none">
-            {brandingLetters.map((l, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "text-sm font-black bg-gradient-to-br bg-clip-text text-transparent hover:scale-110 transition-transform cursor-default",
-                  l.from,
-                  l.to
-                )}
-              >
-                {l.char}
-              </span>
-            ))}
-          </div>
+        <div className="flex items-center justify-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
+          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Powered by</span>
+          <span className="text-xs font-medium text-muted-foreground tracking-[0.2em] hover:text-primary transition-colors cursor-default">
+            ICARUSTUDIO
+          </span>
         </div>
       </footer>
     </div>
