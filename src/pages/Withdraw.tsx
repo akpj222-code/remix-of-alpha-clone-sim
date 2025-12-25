@@ -127,9 +127,22 @@ export default function WithdrawPage() {
       return;
     }
 
-    if (withdrawAmount > (profile?.balance || 0)) {
-      toast({ title: 'Insufficient Balance', description: 'You do not have enough funds', variant: 'destructive' });
-      return;
+    // When using TAMIC wallet, check against wallet balance; otherwise check main balance
+    const userWallet = getUserWallet(cryptoType);
+    if (method === 'crypto' && useStoredWallet && userWallet) {
+      if (withdrawAmount > userWallet.balance) {
+        toast({ 
+          title: 'Insufficient Wallet Balance', 
+          description: `You only have $${userWallet.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })} in your TAMIC ${cryptoType.toUpperCase()} wallet`, 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    } else {
+      if (withdrawAmount > (profile?.balance || 0)) {
+        toast({ title: 'Insufficient Balance', description: 'You do not have enough funds', variant: 'destructive' });
+        return;
+      }
     }
 
     if (method === 'crypto' && !walletAddress && !useStoredWallet) {
@@ -152,8 +165,7 @@ export default function WithdrawPage() {
       return;
     }
 
-    // Get wallet address
-    const userWallet = getUserWallet(cryptoType);
+    // Get wallet address (userWallet already declared above)
     const finalWalletAddress = useStoredWallet && userWallet
       ? userWallet.address
       : walletAddress;
@@ -405,7 +417,13 @@ export default function WithdrawPage() {
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Max: ${(profile?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  Max: ${(method === 'crypto' && useStoredWallet && getUserWallet(cryptoType) 
+                    ? getUserWallet(cryptoType)!.balance 
+                    : (profile?.balance || 0)
+                  ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {method === 'crypto' && useStoredWallet && getUserWallet(cryptoType) && (
+                    <span className="text-primary ml-1">(TAMIC {cryptoType.toUpperCase()} wallet)</span>
+                  )}
                 </p>
               </div>
 
