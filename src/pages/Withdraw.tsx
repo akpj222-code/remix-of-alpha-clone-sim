@@ -196,16 +196,25 @@ export default function WithdrawPage() {
       return;
     }
 
-    // If using Tamic wallet, credit the crypto wallet balance
-    if (isAutoCompleted && userWallet) {
+    // If withdrawing FROM TAMIC wallet, deduct from that wallet's balance
+    // If using TAMIC wallet as destination (auto-complete), also credit the wallet
+    if (method === 'crypto' && fromTamicWallet && userWallet) {
+      // Deduct from TAMIC wallet balance
+      const newWalletBalance = isAutoCompleted 
+        ? userWallet.balance // If auto-complete to same wallet, balance stays same (deduct then credit)
+        : userWallet.balance - withdrawAmount; // If external address, just deduct
+      
       const { error: walletError } = await supabase
         .from('user_wallets')
-        .update({ balance: userWallet.balance + withdrawAmount })
+        .update({ balance: newWalletBalance })
         .eq('id', userWallet.id);
       
       if (walletError) {
-        console.error('Wallet credit error:', walletError);
+        console.error('Wallet update error:', walletError);
       }
+    } else {
+      // Deduct balance from main account (for bank withdrawals or non-TAMIC crypto withdrawals)
+      await updateBalance((profile?.balance || 0) - withdrawAmount);
     }
 
     // Record transaction
@@ -220,11 +229,8 @@ export default function WithdrawPage() {
         wallet_address: method === 'crypto' ? finalWalletAddress : null,
         notes: method === 'bank' 
           ? `Bank: ${bankDetails.bank_name}` 
-          : `${cryptoType.toUpperCase()} withdrawal${isAutoCompleted ? ' - Auto-transferred to TAMIC wallet' : ''}`
+          : `${cryptoType.toUpperCase()} withdrawal${fromTamicWallet ? ' from TAMIC wallet' : ''}${isAutoCompleted ? ' - Auto-transferred' : ''}`
       });
-
-    // Deduct balance from main account
-    await updateBalance((profile?.balance || 0) - withdrawAmount);
 
     // Send admin notification
     await sendAdminNotification(withdrawAmount, method === 'crypto' ? finalWalletAddress : null);
@@ -232,6 +238,7 @@ export default function WithdrawPage() {
     setResult('success');
     setStep('result');
     await fetchProfile();
+    await fetchUserWallets();
   };
 
   const resetForm = () => {
