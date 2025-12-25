@@ -114,10 +114,10 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       </nav>
 
-      {/* Main Content - Flex-1 pushes footer down */}
+      {/* Main Content */}
       <main className="container py-6 flex-1">{children}</main>
 
-      {/* Footer with ICARUSTUDIO Branding */}
+      {/* Footer with Smaller ICARUSTUDIO Branding */}
       <footer className="w-full py-6 pb-24 lg:pb-6 text-center border-t bg-card/30">
         <div className="flex items-center justify-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Powered by</span>
@@ -126,7 +126,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <span
                 key={i}
                 className={cn(
-                  "text-lg font-black bg-gradient-to-br bg-clip-text text-transparent hover:scale-110 transition-transform cursor-default",
+                  "text-sm font-black bg-gradient-to-br bg-clip-text text-transparent hover:scale-110 transition-transform cursor-default",
                   l.from,
                   l.to
                 )}
