@@ -45,6 +45,7 @@ export default function WithdrawPage() {
   const [useStoredWallet, setUseStoredWallet] = useState(false);
   const [result, setResult] = useState<'success' | 'declined'>('success');
   const [userWallets, setUserWallets] = useState<UserWallet[]>([]);
+  const [fromTamicWallet, setFromTamicWallet] = useState(false);
 
   // Check URL params for pre-selected crypto
   useEffect(() => {
@@ -56,6 +57,7 @@ export default function WithdrawPage() {
       setCryptoType(crypto.toLowerCase() as CryptoType);
       if (fromTamic === 'true') {
         setUseStoredWallet(true);
+        setFromTamicWallet(true);
       }
     }
   }, [searchParams]);
@@ -127,9 +129,9 @@ export default function WithdrawPage() {
       return;
     }
 
-    // When using TAMIC wallet, check against wallet balance; otherwise check main balance
+    // When withdrawing FROM TAMIC wallet, check against that wallet's balance; otherwise check main balance
     const userWallet = getUserWallet(cryptoType);
-    if (method === 'crypto' && useStoredWallet && userWallet) {
+    if (method === 'crypto' && fromTamicWallet && userWallet) {
       if (withdrawAmount > userWallet.balance) {
         toast({ 
           title: 'Insufficient Wallet Balance', 
@@ -417,11 +419,11 @@ export default function WithdrawPage() {
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Max: ${(method === 'crypto' && useStoredWallet && getUserWallet(cryptoType) 
+                  Max: ${(method === 'crypto' && fromTamicWallet && getUserWallet(cryptoType) 
                     ? getUserWallet(cryptoType)!.balance 
                     : (profile?.balance || 0)
                   ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  {method === 'crypto' && useStoredWallet && getUserWallet(cryptoType) && (
+                  {method === 'crypto' && fromTamicWallet && getUserWallet(cryptoType) && (
                     <span className="text-primary ml-1">(TAMIC {cryptoType.toUpperCase()} wallet)</span>
                   )}
                 </p>
