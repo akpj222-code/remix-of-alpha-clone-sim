@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Killswitch Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      color: #888;
+      font-size: 0.9rem;
+    }
+    
+    /* Login Form */
+    .login-container {
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 40px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #ff6b6b;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #ccc;
+      font-size: 0.9rem;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #ff6b6b;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(238, 90, 36, 0.3);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .error-msg {
+      color: #ff6b6b;
+      text-align: center;
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
+    
+    /* Dashboard */
+    .dashboard { display: none; }
+    .dashboard.active { display: block; }
+    .login-container.hidden { display: none; }
+    
+    .site-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+    
+    .site-card:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .site-card.killed {
+      border-color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+    }
+    
+    .site-info h3 {
+      font-size: 1.2rem;
+      margin-bottom: 4px;
+    }
+    
+    .site-info .url {
+      color: #888;
+      font-size: 0.85rem;
+    }
+    
+    .site-info .status {
+      font-size: 0.8rem;
+      margin-top: 8px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    
+    .site-info .status.live {
+      background: rgba(46, 213, 115, 0.2);
+      color: #2ed573;
+    }
+    
+    .site-info .status.dead {
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+    }
+    
+    /* Toggle Switch */
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .toggle-label {
+      font-size: 0.85rem;
+      color: #888;
+    }
+    
+    .toggle {
+      position: relative;
+      width: 60px;
+      height: 32px;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #333;
+      border-radius: 32px;
+      transition: 0.3s;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 4px;
+      bottom: 4px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    
+    .toggle input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    }
+    
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(28px);
+    }
+    
+    /* Add Site Form */
+    .add-site-form {
+      background: rgba(255,255,255,0.03);
+      border: 1px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 30px;
+    }
+    
+    .add-site-form h3 {
+      margin-bottom: 20px;
+      color: #ccc;
+    }
+    
+    .add-site-form .form-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .add-site-form .form-row input {
+      flex: 1;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    
+    .add-site-form .form-row input:focus {
+      outline: none;
+      border-color: #ff6b6b;
+    }
+    
+    .btn-secondary {
+      padding: 12px 24px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #ff6b6b;
+    }
+    
+    .logout-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .logout-btn:hover {
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    
+    .skull {
+      font-size: 2rem;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Form -->
+  <div class="login-container" id="loginContainer">
+    <h2>🔐 Developer Access</h2>
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" required placeholder="developer@email.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn" id="loginBtn">Access Dashboard</button>
+      <p class="error-msg" id="errorMsg"></p>
+    </form>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <button class="logout-btn" id="logoutBtn">Logout</button>
+    
+    <div class="container">
+      <div class="header">
+        <h1>☠️ Killswitch Dashboard</h1>
+        <p>Control the life and death of your websites</p>
+      </div>
+      
+      <div id="sitesList" class="loading">Loading sites...</div>
+      
+      <div class="add-site-form">
+        <h3>➕ Add New Site</h3>
+        <div class="form-row">
+          <input type="text" id="newSiteName" placeholder="Site Name (e.g., My Portfolio)">
+          <input type="url" id="newSiteUrl" placeholder="Site URL (e.g., https://mysite.com)">
+        </div>
+        <button class="btn-secondary" id="addSiteBtn">Add Site</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ⚠️ CONFIGURATION - Update these values
+    const SUPABASE_URL = 'https://ulocrddefljecougorye.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsb2NyZGRlZmxqZWNvdWdvcnllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzOTMzNjUsImV4cCI6MjA4MTk2OTM2NX0.cF8uqPv1ed_wHomD325mWuC20_HlcryuLaNyKESR93I';
+    
+    // ⚠️ IMPORTANT: Add your developer email here
+    const DEVELOPER_EMAIL = 'YOUR_DEVELOPER_EMAIL_HERE'; // <-- CHANGE THIS!
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Elements
+    const loginContainer = document.getElementById('loginContainer');
+    const dashboard = document.getElementById('dashboard');
+    const loginForm = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+    const sitesList = document.getElementById('sitesList');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const addSiteBtn = document.getElementById('addSiteBtn');
+    
+    // Check if already logged in
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user.email === DEVELOPER_EMAIL) {
+        showDashboard();
+        loadSites();
+      }
+    }
+    
+    // Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      if (email !== DEVELOPER_EMAIL) {
+        errorMsg.textContent = '🚫 Access denied. Developer only.';
+        return;
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        errorMsg.textContent = error.message;
+        return;
+      }
+      
+      showDashboard();
+      loadSites();
+    });
+    
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      loginContainer.classList.remove('hidden');
+      dashboard.classList.remove('active');
+    });
+    
+    function showDashboard() {
+      loginContainer.classList.add('hidden');
+      dashboard.classList.add('active');
+    }
+    
+    // Load sites
+    async function loadSites() {
+      const { data: sites, error } = await supabase
+        .from('killswitch')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) {
+        sitesList.innerHTML = '<p style="color: #ff6b6b;">Error loading sites</p>';
+        return;
+      }
+      
+      if (sites.length === 0) {
+        sitesList.innerHTML = '<p style="color: #888;">No sites added yet</p>';
+        return;
+      }
+      
+      sitesList.innerHTML = sites.map(site => `
+        <div class="site-card ${site.is_killed ? 'killed' : ''}" data-id="${site.id}">
+          <div class="site-info">
+            <h3>${site.site_name} ${site.is_killed ? '<span class="skull">💀</span>' : ''}</h3>
+            <p class="url">${site.site_url}</p>
+            <span class="status ${site.is_killed ? 'dead' : 'live'}">
+              ${site.is_killed ? '☠️ KILLED' : '✅ LIVE'}
+            </span>
+          </div>
+          <div class="toggle-wrapper">
+            <span class="toggle-label">${site.is_killed ? 'Revive' : 'Kill'}</span>
+            <label class="toggle">
+              <input type="checkbox" ${site.is_killed ? 'checked' : ''} onchange="toggleKill('${site.id}', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Toggle killswitch
+    async function toggleKill(siteId, isKilled) {
+      const { error } = await supabase
+        .from('killswitch')
+        .update({ 
+          is_killed: isKilled,
+          killed_at: isKilled ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', siteId);
+      
+      if (error) {
+        alert('Error updating killswitch: ' + error.message);
+        return;
+      }
+      
+      loadSites();
+    }
+    
+    // Add new site
+    addSiteBtn.addEventListener('click', async () => {
+      const name = document.getElementById('newSiteName').value.trim();
+      const url = document.getElementById('newSiteUrl').value.trim();
+      
+      if (!name || !url) {
+        alert('Please fill in both fields');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('killswitch')
+        .insert({ site_name: name, site_url: url, is_killed: false });
+      
+      if (error) {
+        alert('Error adding site: ' + error.message);
+        return;
+      }
+      
+      document.getElementById('newSiteName').value = '';
+      document.getElementById('newSiteUrl').value = '';
+      loadSites();
+    });
+    
+    // Make toggleKill global
+    window.toggleKill = toggleKill;
+    
+    // Initialize
+    checkAuth();
+  </script>
+</body>
+</html>

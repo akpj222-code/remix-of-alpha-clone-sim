@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      killswitch: {
+        Row: {
+          created_at: string
+          id: string
+          is_killed: boolean
+          killed_at: string | null
+          site_name: string
+          site_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_killed?: boolean
+          killed_at?: string | null
+          site_name: string
+          site_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_killed?: boolean
+          killed_at?: string | null
+          site_name?: string
+          site_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kyc_requests: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
