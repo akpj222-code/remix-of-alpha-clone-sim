@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+// 1. CONFIGURATION: Your Command Center Credentials
+// (These are the same ones from your dashboard index.html)
+const KILLSWITCH_URL = 'https://rxxtcvyztgjzlcsvmyox.supabase.co';
+const KILLSWITCH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4eHRjdnl6dGdqemxjc3ZteW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY3MjgyNzcsImV4cCI6MjA4MjMwNDI3N30.CPjgb825u-BznxCSO5jXMD_v2K5_4aL52qnh2ScAaPY';
 
 const SITE_NAME = 'TAMIC Group';
+
+// 2. Create a specific client just for this check
+const killswitchClient = createClient(KILLSWITCH_URL, KILLSWITCH_KEY);
 
 export function useKillswitch() {
   const [isKilled, setIsKilled] = useState(false);
@@ -10,7 +18,8 @@ export function useKillswitch() {
   useEffect(() => {
     const checkKillswitch = async () => {
       try {
-        const { data, error } = await supabase
+        // Check the status from your Command Center DB
+        const { data, error } = await killswitchClient
           .from('killswitch')
           .select('is_killed')
           .eq('site_name', SITE_NAME)
@@ -18,7 +27,9 @@ export function useKillswitch() {
 
         if (error) {
           console.error('Killswitch check error:', error);
-          setIsKilled(false);
+          // Safety: If we can't connect, keep the site alive (Fail Open)
+          // Change to true if you want it to die on error (Fail Closed)
+          setIsKilled(false); 
         } else {
           setIsKilled(data?.is_killed || false);
         }
@@ -32,8 +43,8 @@ export function useKillswitch() {
 
     checkKillswitch();
 
-    // Subscribe to realtime changes
-    const channel = supabase
+    // 3. Realtime Listener (Optional: Instant Update)
+    const channel = killswitchClient
       .channel('killswitch-changes')
       .on(
         'postgres_changes',
@@ -50,7 +61,7 @@ export function useKillswitch() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      killswitchClient.removeChannel(channel);
     };
   }, []);
 
