@@ -3,6 +3,7 @@ import { TrendingUp, Shield, Briefcase, ArrowRight, Bitcoin, BarChart3, Globe } 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TamicLogo } from '@/components/TamicLogo';
+import { StartDemoModal } from '@/components/demo/StartDemoModal';
 
 const features = [
   {
@@ -48,6 +49,7 @@ export default function Landing() {
             <span className="text-xl font-bold text-foreground">TAMIC GROUP</span>
           </div>
           <div className="flex items-center gap-2">
+            <StartDemoModal />
             <Link to="/auth">
               <Button variant="ghost">Sign In</Button>
             </Link>
@@ -76,6 +78,7 @@ export default function Landing() {
                   Start Trading <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
+              <StartDemoModal />
               <Link to="/auth">
                 <Button size="lg" variant="outline">
                   Sign In
