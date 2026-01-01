@@ -1,10 +1,12 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, TrendingUp, Briefcase, FileText, LogOut, Shield, Bitcoin, Settings, Sun, Moon, Wallet, ArrowDownToLine } from 'lucide-react';
+import { Home, TrendingUp, Briefcase, FileText, LogOut, Shield, Bitcoin, Settings, Sun, Moon, Wallet, ArrowDownToLine, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
+import { useDemo } from '@/hooks/useDemo';
 import { TamicLogo } from '@/components/TamicLogo';
+import { StartDemoModal } from '@/components/demo/StartDemoModal';
 import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
@@ -24,8 +26,10 @@ const navItems = [
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, isAdmin, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { isDemoMode } = useDemo();
   const location = useLocation();
   const navigate = useNavigate();
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -65,6 +69,17 @@ export function AppLayout({ children }: AppLayoutProps) {
           </nav>
 
           <div className="flex items-center gap-2">
+            {!isDemoMode && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowDemoModal(true)}
+                className="hidden sm:flex gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Demo Mode
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
@@ -78,6 +93,8 @@ export function AppLayout({ children }: AppLayoutProps) {
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
+          
+          <StartDemoModal open={showDemoModal} onOpenChange={setShowDemoModal} showTrigger={false} />
         </div>
       </header>
 

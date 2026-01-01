@@ -17,12 +17,22 @@ import { useNavigate } from 'react-router-dom';
 
 const PRESET_AMOUNTS = [10000, 50000, 100000, 500000];
 
-export function StartDemoModal() {
-  const [open, setOpen] = useState(false);
+interface StartDemoModalProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
+}
+
+export function StartDemoModal({ open: controlledOpen, onOpenChange, showTrigger = true }: StartDemoModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50000);
   const { startDemo } = useDemo();
   const navigate = useNavigate();
+
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? (onOpenChange || (() => {})) : setInternalOpen;
 
   const handleStart = () => {
     const amount = customAmount ? parseFloat(customAmount) : selectedAmount;
@@ -41,12 +51,14 @@ export function StartDemoModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <FlaskConical className="h-4 w-4" />
-          Try Demo
-        </Button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="outline" className="gap-2">
+            <FlaskConical className="h-4 w-4" />
+            Try Demo
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
