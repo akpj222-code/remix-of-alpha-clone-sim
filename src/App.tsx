@@ -5,9 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { DemoProvider } from "@/hooks/useDemo";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useKillswitch } from "@/hooks/useKillswitch";
 import { KilledScreen } from "@/components/KilledScreen";
+import { SupportChat } from "@/components/support/SupportChat";
+import { DemoBanner } from "@/components/demo/DemoBanner";
+import { DemoTutorial } from "@/components/demo/DemoTutorial";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -40,35 +44,54 @@ function AppContent() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/stocks" element={<ProtectedRoute><Stocks /></ProtectedRoute>} />
-        <Route path="/crypto" element={<ProtectedRoute><Crypto /></ProtectedRoute>} />
-        <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-        <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-        <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
-        <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
-        <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+      <DemoBanner />
+      <DemoContent />
+      <SupportChat />
+      <DemoTutorial />
+    </>
   );
 }
+
+function DemoContent() {
+  const { isDemoMode } = useDemo();
+  
+  return (
+    <div className={isDemoMode ? "pt-10" : ""}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/stocks" element={<ProtectedRoute><Stocks /></ProtectedRoute>} />
+          <Route path="/crypto" element={<ProtectedRoute><Crypto /></ProtectedRoute>} />
+          <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+          <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+          <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
+          <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
+          <Route path="/kyc" element={<ProtectedRoute><KYC /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </div>
+  );
+}
+
+import { useDemo } from "@/hooks/useDemo";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppContent />
-        </TooltipProvider>
+        <DemoProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppContent />
+          </TooltipProvider>
+        </DemoProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
