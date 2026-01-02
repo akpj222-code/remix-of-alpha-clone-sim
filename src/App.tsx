@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useDemo } from "@/hooks/useDemo";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { DemoProvider } from "@/hooks/useDemo";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -30,6 +31,7 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const { isKilled, loading } = useKillswitch();
+  const { isDemoMode } = useDemo();
 
   if (loading) {
     return (
@@ -44,21 +46,9 @@ function AppContent() {
   }
 
   return (
-    <>
-      <DemoBanner />
-      <DemoContent />
-      <SupportChat />
-      <DemoTutorial />
-    </>
-  );
-}
-
-function DemoContent() {
-  const { isDemoMode } = useDemo();
-  
-  return (
-    <div className={isDemoMode ? "pt-10" : ""}>
-      <BrowserRouter>
+    <BrowserRouter>
+      <div className={isDemoMode ? "pt-10" : ""}>
+        <DemoBanner />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
@@ -74,12 +64,12 @@ function DemoContent() {
           <Route path="/admin" element={<ProtectedRoute requireAdmin><Admin /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </div>
+        <SupportChat />
+        <DemoTutorial />
+      </div>
+    </BrowserRouter>
   );
 }
-
-import { useDemo } from "@/hooks/useDemo";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
