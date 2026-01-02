@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minus, Plus, Loader2, CheckCircle2, Clock, Copy, Wallet } from 'lucide-react';
+import { Minus, Plus, Loader2, CheckCircle2, Clock, Copy, Wallet, FlaskConical } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Crypto } from '@/hooks/useCrypto';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { useProfile } from '@/hooks/useProfile';
+import { useDemo } from '@/hooks/useDemo';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +38,7 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
   const [adminWallet, setAdminWallet] = useState<string | null>(null);
   const { portfolio, executeTrade } = usePortfolio();
   const { profile, updateBalance } = useProfile();
+  const { isDemoMode, demoBalance, demoPortfolio, executeDemoTrade } = useDemo();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,14 +95,16 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
   if (!crypto) return null;
 
   const numQuantity = parseFloat(quantity) || 0;
-  const position = portfolio.find(p => p.symbol === crypto.symbol);
+  const activePortfolio = isDemoMode ? demoPortfolio : portfolio;
+  const activeBalance = isDemoMode ? demoBalance : (profile?.balance || 0);
+  const position = activePortfolio.find(p => p.symbol === crypto.symbol);
   const maxSellShares = position?.shares || 0;
   const totalValue = numQuantity * crypto.price;
   const fee = totalValue * FEE_RATE;
   const grandTotal = tradeType === 'buy' ? totalValue + fee : totalValue - fee;
 
   const canTrade = tradeType === 'buy'
-    ? (profile?.balance || 0) >= grandTotal && numQuantity > 0
+    ? activeBalance >= grandTotal && numQuantity > 0
     : maxSellShares >= numQuantity && numQuantity > 0;
 
   const handleQuantityChange = (delta: number) => {
@@ -134,38 +138,61 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
     setStep('waiting');
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Execute trade
-    const { error } = await executeTrade(
-      tradeType,
-      crypto.symbol,
-      crypto.name,
-      numQuantity,
-      crypto.price,
-      fee
-    );
+    if (isDemoMode) {
+      // Demo mode - use local state
+      const { error } = executeDemoTrade(
+        tradeType,
+        crypto.symbol,
+        crypto.name,
+        numQuantity,
+        crypto.price,
+        fee
+      );
 
-    if (error) {
-      toast({
-        title: "Trade Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-      setStep('input');
-      return;
-    }
-
-    // Update balance
-    const newBalance = tradeType === 'buy'
-      ? (profile?.balance || 0) - grandTotal
-      : (profile?.balance || 0) + grandTotal;
-    await updateBalance(newBalance);
-
-    // For sell orders, show wallet info step
-    if (tradeType === 'sell' && userWallet) {
-      setStep('wallet_info');
+      if (error) {
+        toast({
+          title: "Trade Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        setStep('input');
+        return;
+      }
     } else {
-      setStep('complete');
+      // Live mode - use real database
+      const { error } = await executeTrade(
+        tradeType,
+        crypto.symbol,
+        crypto.name,
+        numQuantity,
+        crypto.price,
+        fee
+      );
+
+      if (error) {
+        toast({
+          title: "Trade Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        setStep('input');
+        return;
+      }
+
+      // Update balance
+      const newBalance = tradeType === 'buy'
+        ? (profile?.balance || 0) - grandTotal
+        : (profile?.balance || 0) + grandTotal;
+      await updateBalance(newBalance);
+
+      // For sell orders, show wallet info step
+      if (tradeType === 'sell' && userWallet) {
+        setStep('wallet_info');
+        return;
+      }
     }
+
+    setStep('complete');
   };
 
   const handleClose = () => {
@@ -191,6 +218,12 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
             <span className="text-muted-foreground font-normal text-sm">
               {formatPrice(crypto.price)}
             </span>
+            {isDemoMode && (
+              <span className="ml-auto flex items-center gap-1 text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded-full">
+                <FlaskConical className="h-3 w-3" />
+                Demo
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -294,7 +327,8 @@ export function CryptoTradeModal({ crypto, open, onOpenChange }: CryptoTradeModa
 
             {tradeType === 'buy' && (
               <p className="text-xs text-muted-foreground">
-                Available Balance: ${(profile?.balance || 0).toFixed(2)}
+                Available Balance: ${activeBalance.toFixed(2)}
+                {isDemoMode && " (Demo)"}
               </p>
             )}
 

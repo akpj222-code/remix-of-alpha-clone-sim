@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart, ArrowUpToLine, RefreshCw } from 'lucide-react';
+import { Users, FileCheck, Clock, XCircle, CheckCircle2, Eye, Search, DollarSign, Wallet, Settings2, Plus, Minus, ArrowDownToLine, TrendingUp, CreditCard, ShoppingCart, ArrowUpToLine, RefreshCw, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AdminSupportChat } from '@/components/admin/AdminSupportChat';
 
 interface KYCRequestWithProfile {
   id: string;
@@ -523,6 +524,10 @@ export default function Admin() {
             <TabsTrigger value="settings" className="gap-2">
               <Settings2 className="h-4 w-4" />
               <span className="hidden sm:inline">Settings</span>
+            </TabsTrigger>
+            <TabsTrigger value="support" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Support</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1255,6 +1260,11 @@ export default function Admin() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Support Tab */}
+          <TabsContent value="support">
+            <AdminSupportChat />
           </TabsContent>
         </Tabs>
 

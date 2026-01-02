@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Minus, Plus, Loader2, CheckCircle2 } from 'lucide-react';
+import { Minus, Plus, Loader2, CheckCircle2, FlaskConical } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Stock } from '@/hooks/useStocks';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { useProfile } from '@/hooks/useProfile';
+import { useDemo } from '@/hooks/useDemo';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -33,18 +34,21 @@ export function TradeModal({ stock, open, onOpenChange }: TradeModalProps) {
   const [step, setStep] = useState<TradeStep>('input');
   const { portfolio, executeTrade } = usePortfolio();
   const { profile, updateBalance } = useProfile();
+  const { isDemoMode, demoBalance, demoPortfolio, executeDemoTrade } = useDemo();
   const { toast } = useToast();
 
   if (!stock) return null;
 
-  const position = portfolio.find(p => p.symbol === stock.symbol);
+  const activePortfolio = isDemoMode ? demoPortfolio : portfolio;
+  const activeBalance = isDemoMode ? demoBalance : (profile?.balance || 0);
+  const position = activePortfolio.find(p => p.symbol === stock.symbol);
   const maxSellShares = position?.shares || 0;
   const totalValue = quantity * stock.price;
   const fee = totalValue * FEE_RATE;
   const grandTotal = tradeType === 'buy' ? totalValue + fee : totalValue - fee;
 
   const canTrade = tradeType === 'buy' 
-    ? (profile?.balance || 0) >= grandTotal 
+    ? activeBalance >= grandTotal 
     : maxSellShares >= quantity;
 
   const handleQuantityChange = (delta: number) => {
@@ -61,31 +65,53 @@ export function TradeModal({ stock, open, onOpenChange }: TradeModalProps) {
     // Simulate verification delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Execute trade
-    const { error } = await executeTrade(
-      tradeType,
-      stock.symbol,
-      stock.name,
-      quantity,
-      stock.price,
-      fee
-    );
+    if (isDemoMode) {
+      // Demo mode - use local state
+      const { error } = executeDemoTrade(
+        tradeType,
+        stock.symbol,
+        stock.name,
+        quantity,
+        stock.price,
+        fee
+      );
 
-    if (error) {
-      toast({
-        title: "Trade Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-      setStep('input');
-      return;
+      if (error) {
+        toast({
+          title: "Trade Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        setStep('input');
+        return;
+      }
+    } else {
+      // Live mode - use real database
+      const { error } = await executeTrade(
+        tradeType,
+        stock.symbol,
+        stock.name,
+        quantity,
+        stock.price,
+        fee
+      );
+
+      if (error) {
+        toast({
+          title: "Trade Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        setStep('input');
+        return;
+      }
+
+      // Update balance
+      const newBalance = tradeType === 'buy' 
+        ? (profile?.balance || 0) - grandTotal
+        : (profile?.balance || 0) + grandTotal;
+      await updateBalance(newBalance);
     }
-
-    // Update balance
-    const newBalance = tradeType === 'buy' 
-      ? (profile?.balance || 0) - grandTotal
-      : (profile?.balance || 0) + grandTotal;
-    await updateBalance(newBalance);
 
     setStep('complete');
   };
@@ -106,6 +132,12 @@ export function TradeModal({ stock, open, onOpenChange }: TradeModalProps) {
             <span className="text-muted-foreground font-normal text-sm">
               ${stock.price.toFixed(2)}
             </span>
+            {isDemoMode && (
+              <span className="ml-auto flex items-center gap-1 text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded-full">
+                <FlaskConical className="h-3 w-3" />
+                Demo
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -168,7 +200,8 @@ export function TradeModal({ stock, open, onOpenChange }: TradeModalProps) {
 
             {tradeType === 'buy' && (
               <p className="text-xs text-muted-foreground">
-                Available Balance: ${(profile?.balance || 0).toFixed(2)}
+                Available Balance: ${activeBalance.toFixed(2)}
+                {isDemoMode && " (Demo)"}
               </p>
             )}
 
