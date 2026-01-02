@@ -1,11 +1,40 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+interface DemoPortfolioItem {
+  symbol: string;
+  company_name: string;
+  shares: number;
+  average_price: number;
+}
+
+interface DemoTrade {
+  id: string;
+  symbol: string;
+  company_name: string;
+  trade_type: 'buy' | 'sell';
+  shares: number;
+  price_per_share: number;
+  total_amount: number;
+  fee: number;
+  created_at: string;
+}
+
 interface DemoContextType {
   isDemoMode: boolean;
   demoBalance: number;
+  demoPortfolio: DemoPortfolioItem[];
+  demoTrades: DemoTrade[];
   startDemo: (initialBalance: number) => void;
   exitDemo: () => void;
   updateDemoBalance: (newBalance: number) => void;
+  executeDemoTrade: (
+    type: 'buy' | 'sell',
+    symbol: string,
+    companyName: string,
+    shares: number,
+    pricePerShare: number,
+    fee: number
+  ) => { error: Error | null };
   currentTutorialStep: number;
   nextTutorialStep: () => void;
   completeTutorial: () => void;
@@ -28,24 +57,37 @@ const TUTORIAL_STEPS = [
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoBalance, setDemoBalance] = useState(0);
+  const [demoPortfolio, setDemoPortfolio] = useState<DemoPortfolioItem[]>([]);
+  const [demoTrades, setDemoTrades] = useState<DemoTrade[]>([]);
   const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
   const [isTutorialComplete, setIsTutorialComplete] = useState(false);
 
   useEffect(() => {
     const savedDemo = localStorage.getItem('demo_mode');
     if (savedDemo) {
-      const { active, balance, tutorialStep, tutorialComplete } = JSON.parse(savedDemo);
+      const { active, balance, portfolio, trades, tutorialStep, tutorialComplete } = JSON.parse(savedDemo);
       setIsDemoMode(active);
       setDemoBalance(balance);
+      setDemoPortfolio(portfolio || []);
+      setDemoTrades(trades || []);
       setCurrentTutorialStep(tutorialStep || 0);
       setIsTutorialComplete(tutorialComplete || false);
     }
   }, []);
 
-  const saveToStorage = (active: boolean, balance: number, step: number, complete: boolean) => {
+  const saveToStorage = (
+    active: boolean, 
+    balance: number, 
+    portfolio: DemoPortfolioItem[], 
+    trades: DemoTrade[],
+    step: number, 
+    complete: boolean
+  ) => {
     localStorage.setItem('demo_mode', JSON.stringify({ 
       active, 
-      balance, 
+      balance,
+      portfolio,
+      trades,
       tutorialStep: step,
       tutorialComplete: complete 
     }));
@@ -54,14 +96,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const startDemo = (initialBalance: number) => {
     setIsDemoMode(true);
     setDemoBalance(initialBalance);
+    setDemoPortfolio([]);
+    setDemoTrades([]);
     setCurrentTutorialStep(0);
     setIsTutorialComplete(false);
-    saveToStorage(true, initialBalance, 0, false);
+    saveToStorage(true, initialBalance, [], [], 0, false);
   };
 
   const exitDemo = () => {
     setIsDemoMode(false);
     setDemoBalance(0);
+    setDemoPortfolio([]);
+    setDemoTrades([]);
     setCurrentTutorialStep(0);
     setIsTutorialComplete(false);
     localStorage.removeItem('demo_mode');
@@ -69,32 +115,116 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const updateDemoBalance = (newBalance: number) => {
     setDemoBalance(newBalance);
-    saveToStorage(true, newBalance, currentTutorialStep, isTutorialComplete);
+    saveToStorage(true, newBalance, demoPortfolio, demoTrades, currentTutorialStep, isTutorialComplete);
+  };
+
+  const executeDemoTrade = (
+    type: 'buy' | 'sell',
+    symbol: string,
+    companyName: string,
+    shares: number,
+    pricePerShare: number,
+    fee: number
+  ): { error: Error | null } => {
+    const totalAmount = shares * pricePerShare;
+    const grandTotal = type === 'buy' ? totalAmount + fee : totalAmount - fee;
+    
+    // Validate balance for buy
+    if (type === 'buy' && demoBalance < grandTotal) {
+      return { error: new Error('Insufficient demo balance') };
+    }
+    
+    // Validate shares for sell
+    const existingPosition = demoPortfolio.find(p => p.symbol === symbol);
+    if (type === 'sell' && (!existingPosition || existingPosition.shares < shares)) {
+      return { error: new Error('Insufficient shares') };
+    }
+
+    // Update balance
+    const newBalance = type === 'buy' 
+      ? demoBalance - grandTotal 
+      : demoBalance + grandTotal;
+    
+    // Update portfolio
+    let newPortfolio: DemoPortfolioItem[];
+    if (type === 'buy') {
+      if (existingPosition) {
+        const newShares = existingPosition.shares + shares;
+        const newAvgPrice = (
+          (existingPosition.shares * existingPosition.average_price + shares * pricePerShare) / newShares
+        );
+        newPortfolio = demoPortfolio.map(p => 
+          p.symbol === symbol 
+            ? { ...p, shares: newShares, average_price: newAvgPrice }
+            : p
+        );
+      } else {
+        newPortfolio = [...demoPortfolio, {
+          symbol,
+          company_name: companyName,
+          shares,
+          average_price: pricePerShare
+        }];
+      }
+    } else {
+      const newShares = existingPosition!.shares - shares;
+      if (newShares <= 0) {
+        newPortfolio = demoPortfolio.filter(p => p.symbol !== symbol);
+      } else {
+        newPortfolio = demoPortfolio.map(p => 
+          p.symbol === symbol ? { ...p, shares: newShares } : p
+        );
+      }
+    }
+
+    // Add trade record
+    const newTrade: DemoTrade = {
+      id: `demo-${Date.now()}`,
+      symbol,
+      company_name: companyName,
+      trade_type: type,
+      shares,
+      price_per_share: pricePerShare,
+      total_amount: grandTotal,
+      fee,
+      created_at: new Date().toISOString()
+    };
+    const newTrades = [newTrade, ...demoTrades].slice(0, 50); // Keep last 50
+
+    setDemoBalance(newBalance);
+    setDemoPortfolio(newPortfolio);
+    setDemoTrades(newTrades);
+    saveToStorage(true, newBalance, newPortfolio, newTrades, currentTutorialStep, isTutorialComplete);
+
+    return { error: null };
   };
 
   const nextTutorialStep = () => {
     const next = currentTutorialStep + 1;
     if (next >= TUTORIAL_STEPS.length) {
       setIsTutorialComplete(true);
-      saveToStorage(true, demoBalance, next, true);
+      saveToStorage(true, demoBalance, demoPortfolio, demoTrades, next, true);
     } else {
       setCurrentTutorialStep(next);
-      saveToStorage(true, demoBalance, next, false);
+      saveToStorage(true, demoBalance, demoPortfolio, demoTrades, next, false);
     }
   };
 
   const completeTutorial = () => {
     setIsTutorialComplete(true);
-    saveToStorage(true, demoBalance, TUTORIAL_STEPS.length, true);
+    saveToStorage(true, demoBalance, demoPortfolio, demoTrades, TUTORIAL_STEPS.length, true);
   };
 
   return (
     <DemoContext.Provider value={{
       isDemoMode,
       demoBalance,
+      demoPortfolio,
+      demoTrades,
       startDemo,
       exitDemo,
       updateDemoBalance,
+      executeDemoTrade,
       currentTutorialStep,
       nextTutorialStep,
       completeTutorial,
