@@ -235,7 +235,7 @@ export function AdminSupportChat() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <User className="h-4 w-4 text-primary" />
+                          <MessageSquare className="h-4 w-4 text-primary" />
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">
