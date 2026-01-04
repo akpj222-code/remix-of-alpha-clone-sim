@@ -47,7 +47,7 @@ const socialLinks = [
       </svg>
     ),
     url: 'https://www.tiktok.com/@tamicgroup?_r=1&_t=ZS-92nDLVHKQt7',
-    color: 'bg-foreground hover:bg-foreground/80'
+    color: 'bg-black hover:bg-black/80'
   }
 ];
 
