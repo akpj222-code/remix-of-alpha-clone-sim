@@ -67,18 +67,19 @@ export function AppLayout({ children }: AppLayoutProps) {
             )}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <DemoToggle />
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="hidden sm:block">
+              <DemoToggle />
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Link to="/settings">
-              <Button variant="ghost" size="icon">
+            <Link to="/settings" className="hidden sm:block">
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
                 <Settings className="h-4 w-4" />
               </Button>
             </Link>
-            <span className="hidden sm:inline text-sm text-muted-foreground">{user?.email}</span>
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -87,19 +88,40 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur lg:hidden">
-        <div className="flex items-center justify-around py-2">
+        <div className="flex items-center justify-around py-1 px-1">
           {navItems.slice(0, 5).map((item) => (
-            <Link key={item.path} to={item.path}>
+            <Link key={item.path} to={item.path} className="flex-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className={cn("flex-col gap-1 h-auto py-2", location.pathname === item.path && "text-primary")}
+                className={cn(
+                  "flex-col gap-0.5 h-auto py-1.5 px-1 w-full min-w-0",
+                  location.pathname === item.path && "text-primary"
+                )}
               >
-                <item.icon className="h-5 w-5" />
-                <span className="text-xs">{item.label}</span>
+                <item.icon className="h-4 w-4" />
+                <span className="text-[10px] truncate">{item.label}</span>
               </Button>
             </Link>
           ))}
+          {/* More menu for mobile */}
+          <Link to="/settings" className="flex-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "flex-col gap-0.5 h-auto py-1.5 px-1 w-full min-w-0",
+                location.pathname === '/settings' && "text-primary"
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="text-[10px] truncate">More</span>
+            </Button>
+          </Link>
+        </div>
+        {/* Demo Toggle for mobile */}
+        <div className="sm:hidden border-t px-4 py-2 flex justify-center bg-background">
+          <DemoToggle />
         </div>
       </nav>
 
