@@ -145,18 +145,18 @@ export function SupportChat() {
       <Button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-24 right-4 lg:bottom-6 z-50 h-14 w-14 rounded-full shadow-lg",
+          "fixed bottom-32 right-4 lg:bottom-6 z-50 h-12 w-12 rounded-full shadow-lg",
           "bg-primary hover:bg-primary/90 text-primary-foreground",
           isOpen && "hidden"
         )}
         size="icon"
       >
-        <MessageCircle className="h-6 w-6" />
+        <MessageCircle className="h-5 w-5" />
       </Button>
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-4 lg:bottom-6 z-50 w-80 sm:w-96 bg-card border rounded-lg shadow-2xl flex flex-col max-h-[500px]">
+        <div className="fixed bottom-32 right-4 lg:bottom-6 z-50 w-80 sm:w-96 bg-card border rounded-lg shadow-2xl flex flex-col max-h-[450px]">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
             <div>

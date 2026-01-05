@@ -47,7 +47,7 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <div className={isDemoMode ? "pt-10" : ""}>
+      <div className={isDemoMode ? "pt-8" : ""}>
         <DemoBanner />
         <Routes>
           <Route path="/" element={<Landing />} />
