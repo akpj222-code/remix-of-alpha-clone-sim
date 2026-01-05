@@ -118,6 +118,20 @@ export default function Auth() {
         description: error.message,
         variant: 'destructive',
       });
+    } else {
+      // Send new device login email
+      try {
+        const deviceInfo = `${navigator.userAgent.split('(')[1]?.split(')')[0] || 'Unknown device'}`;
+        await supabase.functions.invoke('send-user-email', {
+          body: {
+            type: 'new_device',
+            email: values.email,
+            device_info: deviceInfo,
+          }
+        });
+      } catch (emailError) {
+        console.error('Failed to send login email:', emailError);
+      }
     }
   };
 
@@ -137,6 +151,19 @@ export default function Auth() {
         variant: 'destructive',
       });
     } else {
+      // Send welcome email
+      try {
+        await supabase.functions.invoke('send-user-email', {
+          body: {
+            type: 'welcome',
+            email: values.email,
+            name: values.fullName,
+          }
+        });
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
+      
       toast({
         title: 'Account created',
         description: 'Welcome to TAMIC GROUP! You can now sign in.',

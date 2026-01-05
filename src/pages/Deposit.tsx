@@ -128,6 +128,20 @@ export default function Deposit() {
       notes: `User initiated ${selectedCrypto} crypto deposit. Wallet ID: ${profile?.wallet_id || 'N/A'}`,
     });
 
+    // Send email notification to user
+    try {
+      await supabase.functions.invoke('send-user-email', {
+        body: {
+          type: 'deposit',
+          user_id: user.id,
+          amount: amount,
+          currency: selectedCrypto,
+        }
+      });
+    } catch (emailError) {
+      console.error('Failed to send deposit email:', emailError);
+    }
+
     setSubmittingDeposit(false);
 
     if (error) {
