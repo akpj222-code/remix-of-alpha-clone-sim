@@ -1,4 +1,4 @@
-import { FlaskConical, X, GraduationCap, ArrowRight } from 'lucide-react';
+import { FlaskConical, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDemo } from '@/hooks/useDemo';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,39 +29,32 @@ export function DemoBanner() {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white py-2 px-4 shadow-lg">
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 py-1.5 px-3 shadow-sm">
       <div className="container flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
-            <FlaskConical className="h-4 w-4" />
-            <span className="text-sm font-bold uppercase tracking-wide">Demo Mode</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <GraduationCap className="h-4 w-4" />
-            <span className="text-sm">Practice Trading</span>
-          </div>
-          <div className="text-sm font-semibold">
-            Balance: ${demoBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </div>
-        </div>
         <div className="flex items-center gap-2">
+          <FlaskConical className="h-3.5 w-3.5 text-white" />
+          <span className="text-xs font-semibold text-white uppercase tracking-wide">Demo</span>
+          <span className="text-xs text-white/90 hidden sm:inline">•</span>
+          <span className="text-xs text-white/90 hidden sm:inline">
+            ${demoBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleSwitchToLive}
-            className="text-white hover:bg-white/20 gap-1 hidden sm:flex"
+            className="text-white hover:bg-white/20 h-6 px-2 text-xs hidden sm:flex"
           >
-            <ArrowRight className="h-4 w-4" />
-            Switch to Live
+            Go Live
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={handleExitDemo}
-            className="text-white hover:bg-white/20 gap-1"
+            className="text-white hover:bg-white/20 h-6 w-6"
           >
-            <X className="h-4 w-4" />
-            <span className="hidden sm:inline">Exit Demo</span>
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>

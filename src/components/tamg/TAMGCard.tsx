@@ -39,6 +39,30 @@ export function TAMGCard() {
     fetchPrice();
     fetchMinShares();
     if (user) fetchHolding();
+
+    // Subscribe to realtime updates for admin_settings (TAMG price changes)
+    const channel = supabase
+      .channel('tamg-price-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'admin_settings',
+          filter: 'setting_key=eq.tamg_share_price'
+        },
+        (payload) => {
+          const newPrice = parseFloat(payload.new.setting_value);
+          setBasePrice(newPrice);
+          setDisplayPrice(newPrice);
+          setPriceChange(0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Dynamic price fluctuation algorithm
