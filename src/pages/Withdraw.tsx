@@ -117,6 +117,15 @@ export default function WithdrawPage() {
           walletAddress: finalWalletAddress,
         }
       });
+      
+      // Send email notification to user
+      await supabase.functions.invoke('send-user-email', {
+        body: {
+          type: 'withdrawal',
+          user_id: user?.id,
+          amount: withdrawAmount,
+        }
+      });
     } catch (error) {
       console.error('Failed to send admin notification:', error);
     }
