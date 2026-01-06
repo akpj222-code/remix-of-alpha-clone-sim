@@ -250,11 +250,8 @@ export default function Auth() {
                             type="email" 
                             placeholder="Enter your email" 
                             className="bg-card border-border h-12 rounded-lg" 
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
                             autoComplete="email"
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
