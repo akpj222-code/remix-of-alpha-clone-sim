@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Building2, Shield, ChevronRight, Play, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Sun, Moon, Monitor, Building2, Shield, ChevronRight, Play, Lock, Eye, EyeOff, Loader2, TrendingUp, Bitcoin, ArrowDownToLine, ArrowUpToLine, FileText, LogOut } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,13 +12,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { DemoToggle } from '@/components/demo/DemoToggle';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { profile, fetchProfile } = useProfile();
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
   
   const [bankDetails, setBankDetails] = useState({
     bank_name: '',
@@ -131,7 +137,50 @@ export default function Settings() {
           </p>
         </div>
 
-        {/* Admin Panel Link (for mobile) */}
+        {/* Quick Access - Mobile Only */}
+        <div className="lg:hidden">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick Access</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              <Link to="/stocks" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium">Stocks</span>
+              </Link>
+              <Link to="/crypto" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                <Bitcoin className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium">Crypto</span>
+              </Link>
+              <Link to="/deposit" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                <ArrowDownToLine className="h-5 w-5 text-success" />
+                <span className="text-sm font-medium">Deposit</span>
+              </Link>
+              <Link to="/withdraw" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                <ArrowUpToLine className="h-5 w-5 text-destructive" />
+                <span className="text-sm font-medium">Withdraw</span>
+              </Link>
+              <Link to="/kyc" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors col-span-2">
+                <FileText className="h-5 w-5 text-warning" />
+                <span className="text-sm font-medium">KYC Verification</span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Demo Mode Toggle */}
+        <Card className="lg:hidden">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Demo Mode</p>
+              <p className="text-sm text-muted-foreground">Try app with sample data</p>
+            </div>
+            <DemoToggle />
+          </CardContent>
+        </Card>
+
+        {/* Admin Panel Link */}
         {isAdmin && (
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="p-4">
@@ -387,6 +436,18 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Sign Out Button - Mobile */}
+        <div className="lg:hidden pb-20">
+          <Button 
+            variant="outline" 
+            className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
       </div>
     </AppLayout>
   );

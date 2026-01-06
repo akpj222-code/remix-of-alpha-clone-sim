@@ -19,8 +19,13 @@ const navItems = [
   { path: '/crypto', label: 'Crypto', icon: Bitcoin },
   { path: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
+];
+
+const mobileNavItems = [
+  { path: '/dashboard', label: 'Home', icon: Home },
+  { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/deposit', label: 'Deposit', icon: ArrowDownToLine },
-  { path: '/kyc', label: 'KYC', icon: FileText },
+  { path: '/portfolio', label: 'Portfolio', icon: Briefcase },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -87,49 +92,44 @@ export function AppLayout({ children }: AppLayoutProps) {
       </header>
 
       {/* Mobile Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur lg:hidden">
-        <div className="flex items-center justify-around py-1 px-1">
-          {navItems.slice(0, 5).map((item) => (
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur lg:hidden safe-area-bottom">
+        <div className="flex items-center justify-around py-2 px-1">
+          {mobileNavItems.map((item) => (
             <Link key={item.path} to={item.path} className="flex-1">
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "flex-col gap-0.5 h-auto py-1.5 px-1 w-full min-w-0",
-                  location.pathname === item.path && "text-primary"
+                  "flex-col gap-1 h-auto py-2 px-2 w-full min-w-0",
+                  location.pathname === item.path && "text-primary bg-primary/5"
                 )}
               >
-                <item.icon className="h-4 w-4" />
-                <span className="text-[10px] truncate">{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="text-[10px] font-medium truncate">{item.label}</span>
               </Button>
             </Link>
           ))}
-          {/* More menu for mobile */}
           <Link to="/settings" className="flex-1">
             <Button
               variant="ghost"
               size="sm"
               className={cn(
-                "flex-col gap-0.5 h-auto py-1.5 px-1 w-full min-w-0",
-                location.pathname === '/settings' && "text-primary"
+                "flex-col gap-1 h-auto py-2 px-2 w-full min-w-0",
+                location.pathname === '/settings' && "text-primary bg-primary/5"
               )}
             >
-              <Settings className="h-4 w-4" />
-              <span className="text-[10px] truncate">More</span>
+              <Settings className="h-5 w-5" />
+              <span className="text-[10px] font-medium truncate">More</span>
             </Button>
           </Link>
-        </div>
-        {/* Demo Toggle for mobile */}
-        <div className="sm:hidden border-t px-4 py-2 flex justify-center bg-background">
-          <DemoToggle />
         </div>
       </nav>
 
       {/* Main Content */}
-      <main className="container py-6 flex-1">{children}</main>
+      <main className="container py-4 sm:py-6 flex-1 pb-24 lg:pb-6">{children}</main>
 
-      {/* Footer - Minimal & Subtle */}
-      <footer className="w-full py-6 pb-24 lg:pb-6 text-center border-t bg-card/30">
+      {/* Footer - Minimal & Subtle - Hidden on mobile */}
+      <footer className="hidden lg:block w-full py-6 text-center border-t bg-card/30">
         <div className="flex items-center justify-center gap-2 opacity-70 hover:opacity-100 transition-opacity">
           <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">Powered by</span>
           <span className="text-xs font-medium text-muted-foreground tracking-[0.2em] hover:text-primary transition-colors cursor-default">
