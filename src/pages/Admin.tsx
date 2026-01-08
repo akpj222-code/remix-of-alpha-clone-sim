@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AdminSupportChat } from '@/components/admin/AdminSupportChat';
+import { BTCAddressWithQRManager } from '@/components/admin/BTCAddressWithQRManager';
 
 interface KYCRequestWithProfile {
   id: string;
@@ -1181,9 +1182,20 @@ export default function Admin() {
                 <CardDescription>Configure cryptocurrency wallet addresses for deposits. Add multiple addresses per network for random selection.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* BTC Addresses */}
+                {/* BTC Addresses with QR Codes */}
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">BTC Addresses</label>
+                  <label className="text-sm font-medium text-foreground">BTC Addresses with QR Codes (Optional)</label>
+                  <p className="text-xs text-muted-foreground">Add BTC addresses paired with QR code images. QR codes are optional.</p>
+                  <BTCAddressWithQRManager 
+                    adminSettings={adminSettings}
+                    updateAdminSetting={updateAdminSetting}
+                    fetchAdminSettings={fetchAdminSettings}
+                  />
+                </div>
+
+                {/* BTC Addresses (without QR) */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">BTC Addresses (No QR Code)</label>
                   <div className="space-y-2">
                     {getWalletAddresses('btc').map((addr, idx) => (
                       <div key={idx} className="flex gap-2 items-center">

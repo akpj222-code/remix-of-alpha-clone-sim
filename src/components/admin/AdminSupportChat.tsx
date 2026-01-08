@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, User, Clock, ChevronLeft, RefreshCw } from 'lucide-react';
+import { MessageSquare, Send, User, ChevronLeft, RefreshCw, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ interface Message {
   is_from_admin: boolean;
   is_read: boolean;
   created_at: string;
+  image_url?: string | null;
 }
 
 interface UserConversation {
@@ -34,7 +35,9 @@ export function AdminSupportChat() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -112,7 +115,7 @@ export function AdminSupportChat() {
         email: profile?.email || 'Unknown',
         full_name: profile?.full_name || null,
         unread_count: unreadCount,
-        last_message: lastMsg?.message || '',
+        last_message: lastMsg?.image_url ? '📷 Image' : (lastMsg?.message || ''),
         last_message_time: lastMsg?.created_at || ''
       };
     });
@@ -150,16 +153,17 @@ export function AdminSupportChat() {
     fetchMessages(userId);
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedUserId) return;
+  const handleSendMessage = async (imageUrl?: string) => {
+    if ((!newMessage.trim() && !imageUrl) || !selectedUserId) return;
 
     setSending(true);
     const { error } = await supabase
       .from('support_messages')
       .insert({
         user_id: selectedUserId,
-        message: newMessage.trim(),
-        is_from_admin: true
+        message: newMessage.trim() || (imageUrl ? '📷 Image' : ''),
+        is_from_admin: true,
+        image_url: imageUrl || null
       });
 
     if (error) {
@@ -174,6 +178,63 @@ export function AdminSupportChat() {
       fetchConversations();
     }
     setSending(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedUserId) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Error',
+        description: 'Please select an image file',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'Error',
+        description: 'Image must be less than 5MB',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `admin/${selectedUserId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('support-images')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      toast({
+        title: 'Error',
+        description: 'Failed to upload image',
+        variant: 'destructive'
+      });
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('support-images')
+      .getPublicUrl(fileName);
+
+    await handleSendMessage(urlData.publicUrl);
+    setUploading(false);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const formatTime = (date: string) => {
@@ -311,7 +372,18 @@ export function AdminSupportChat() {
                                 : "bg-muted"
                             )}
                           >
-                            <p className="text-sm">{msg.message}</p>
+                            {msg.image_url && (
+                              <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
+                                <img 
+                                  src={msg.image_url} 
+                                  alt="Shared image" 
+                                  className="rounded-md max-w-full max-h-40 object-cover mb-2 cursor-pointer hover:opacity-90"
+                                />
+                              </a>
+                            )}
+                            {msg.message && msg.message !== '📷 Image' && (
+                              <p className="text-sm">{msg.message}</p>
+                            )}
                             <p className={cn(
                               "text-xs mt-1",
                               msg.is_from_admin ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -328,14 +400,31 @@ export function AdminSupportChat() {
                   {/* Input */}
                   <div className="p-3 border-t">
                     <div className="flex gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading || sending}
+                        className="flex-shrink-0"
+                      >
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                      </Button>
                       <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type your reply..."
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        disabled={sending}
+                        disabled={sending || uploading}
                       />
-                      <Button onClick={handleSendMessage} disabled={sending || !newMessage.trim()}>
+                      <Button onClick={() => handleSendMessage()} disabled={sending || uploading || !newMessage.trim()}>
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>

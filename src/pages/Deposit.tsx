@@ -12,8 +12,14 @@ import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
 
 type CryptoType = 'BTC' | 'ETH' | 'USDT';
 
+interface BTCAddressWithQR {
+  address: string;
+  qrCode?: string;
+}
+
 interface DepositDetails {
   btcAddresses?: string[];
+  btcAddressesWithQR?: BTCAddressWithQR[];
   ethAddresses?: string[];
   usdtAddresses?: string[];
 }
@@ -27,6 +33,7 @@ export default function Deposit() {
   const [depositDetails, setDepositDetails] = useState<DepositDetails | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
+  const [selectedQRCode, setSelectedQRCode] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState<string>('');
   const [submittingDeposit, setSubmittingDeposit] = useState(false);
 
@@ -55,6 +62,9 @@ export default function Deposit() {
           case 'deposit_btc_addresses':
             try { settings.btcAddresses = JSON.parse(item.setting_value); } catch { settings.btcAddresses = []; }
             break;
+          case 'deposit_btc_addresses_with_qr':
+            try { settings.btcAddressesWithQR = JSON.parse(item.setting_value); } catch { settings.btcAddressesWithQR = []; }
+            break;
           case 'deposit_eth_addresses':
             try { settings.ethAddresses = JSON.parse(item.setting_value); } catch { settings.ethAddresses = []; }
             break;
@@ -73,18 +83,40 @@ export default function Deposit() {
   };
 
   const selectRandomAddress = (details: DepositDetails, crypto: CryptoType) => {
-    let addresses: string[] = [];
-    switch (crypto) {
-      case 'BTC': addresses = details.btcAddresses || []; break;
-      case 'ETH': addresses = details.ethAddresses || []; break;
-      case 'USDT': addresses = details.usdtAddresses || []; break;
-    }
+    setSelectedQRCode(null);
     
-    if (addresses.length > 0) {
-      const randomIndex = Math.floor(Math.random() * addresses.length);
-      setSelectedAddress(addresses[randomIndex]);
+    if (crypto === 'BTC') {
+      // For BTC, combine regular addresses and addresses with QR codes
+      const regularAddresses = details.btcAddresses || [];
+      const addressesWithQR = details.btcAddressesWithQR || [];
+      
+      // Create a combined pool
+      const allBTCOptions: { address: string; qrCode?: string }[] = [
+        ...regularAddresses.map(addr => ({ address: addr })),
+        ...addressesWithQR
+      ];
+      
+      if (allBTCOptions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * allBTCOptions.length);
+        const selected = allBTCOptions[randomIndex];
+        setSelectedAddress(selected.address);
+        setSelectedQRCode(selected.qrCode || null);
+      } else {
+        setSelectedAddress('');
+      }
     } else {
-      setSelectedAddress('');
+      let addresses: string[] = [];
+      switch (crypto) {
+        case 'ETH': addresses = details.ethAddresses || []; break;
+        case 'USDT': addresses = details.usdtAddresses || []; break;
+      }
+      
+      if (addresses.length > 0) {
+        const randomIndex = Math.floor(Math.random() * addresses.length);
+        setSelectedAddress(addresses[randomIndex]);
+      } else {
+        setSelectedAddress('');
+      }
     }
   };
 
@@ -253,6 +285,17 @@ export default function Deposit() {
               </div>
             ) : selectedAddress ? (
               <div className="space-y-4">
+                {/* QR Code for BTC (if available) */}
+                {selectedCrypto === 'BTC' && selectedQRCode && (
+                  <div className="flex justify-center p-4 bg-white rounded-lg">
+                    <img 
+                      src={selectedQRCode} 
+                      alt="BTC QR Code" 
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+                )}
+
                 <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
                   <p className="text-xs text-muted-foreground mb-2">
                     {selectedCrypto} Deposit Address 
