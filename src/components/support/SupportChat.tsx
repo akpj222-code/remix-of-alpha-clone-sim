@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -56,6 +56,7 @@ interface Message {
   message: string;
   is_from_admin: boolean;
   created_at: string;
+  image_url?: string | null;
 }
 
 export function SupportChat() {
@@ -65,7 +66,9 @@ export function SupportChat() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -115,22 +118,65 @@ export function SupportChat() {
     setLoading(false);
   };
 
-  const sendMessage = async () => {
-    if (!user || !newMessage.trim()) return;
+  const sendMessage = async (imageUrl?: string) => {
+    if (!user || (!newMessage.trim() && !imageUrl)) return;
     setSending(true);
 
     const { error } = await supabase
       .from('support_messages')
       .insert({
         user_id: user.id,
-        message: newMessage.trim(),
-        is_from_admin: false
+        message: newMessage.trim() || (imageUrl ? '📷 Image' : ''),
+        is_from_admin: false,
+        image_url: imageUrl || null
       });
 
     if (!error) {
       setNewMessage('');
     }
     setSending(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return;
+    }
+
+    setUploading(true);
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError, data } = await supabase.storage
+      .from('support-images')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('support-images')
+      .getPublicUrl(fileName);
+
+    await sendMessage(urlData.publicUrl);
+    setUploading(false);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const formatTime = (dateStr: string) => {
@@ -218,7 +264,16 @@ export function SupportChat() {
                         : "bg-primary text-primary-foreground ml-auto"
                     )}
                   >
-                    <p>{msg.message}</p>
+                    {msg.image_url && (
+                      <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
+                        <img 
+                          src={msg.image_url} 
+                          alt="Shared image" 
+                          className="rounded-md max-w-full max-h-40 object-cover mb-2 cursor-pointer hover:opacity-90"
+                        />
+                      </a>
+                    )}
+                    {msg.message && msg.message !== '📷 Image' && <p>{msg.message}</p>}
                     <p className={cn(
                       "text-[10px] mt-1",
                       msg.is_from_admin ? "text-muted-foreground" : "opacity-70"
@@ -240,14 +295,31 @@ export function SupportChat() {
               }}
               className="flex gap-2"
             >
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || sending}
+                className="flex-shrink-0"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+              </Button>
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
-                disabled={sending}
+                disabled={sending || uploading}
                 className="flex-1"
               />
-              <Button type="submit" size="icon" disabled={sending || !newMessage.trim()}>
+              <Button type="submit" size="icon" disabled={sending || uploading || !newMessage.trim()}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </form>
