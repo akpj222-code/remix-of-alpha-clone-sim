@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TradeModal } from '@/components/stocks/TradeModal';
+import { TAMGLiquidateModal } from '@/components/tamg/TAMGLiquidateModal';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { useStocks, Stock } from '@/hooks/useStocks';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,11 +21,13 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 export default function Portfolio() {
-  const { portfolio, trades } = usePortfolio();
+  const { portfolio, trades, fetchPortfolio } = usePortfolio();
   const { stocks, fetchStocks, getStock } = useStocks();
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [tamgPrice, setTamgPrice] = useState<number>(25);
+  const [liquidateModalOpen, setLiquidateModalOpen] = useState(false);
+  const [selectedTamgHolding, setSelectedTamgHolding] = useState<{ shares: number; price: number } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -93,6 +96,15 @@ export default function Portfolio() {
       setSelectedStock(stock);
       setTradeModalOpen(true);
     }
+  };
+
+  const handleLiquidateTamg = (shares: number) => {
+    setSelectedTamgHolding({ shares, price: tamgPrice });
+    setLiquidateModalOpen(true);
+  };
+
+  const handleLiquidationSuccess = () => {
+    fetchPortfolio();
   };
 
   return (
@@ -209,9 +221,20 @@ export default function Portfolio() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" onClick={() => handleTrade(item.symbol, item.isTamg)}>
-                            {item.isTamg ? 'Buy More' : 'Trade'}
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            {item.isTamg && (
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleLiquidateTamg(item.shares)}
+                              >
+                                Liquidate
+                              </Button>
+                            )}
+                            <Button size="sm" onClick={() => handleTrade(item.symbol, item.isTamg)}>
+                              {item.isTamg ? 'Buy More' : 'Trade'}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -272,6 +295,16 @@ export default function Portfolio() {
           open={tradeModalOpen}
           onOpenChange={setTradeModalOpen}
         />
+
+        {selectedTamgHolding && (
+          <TAMGLiquidateModal
+            open={liquidateModalOpen}
+            onOpenChange={setLiquidateModalOpen}
+            currentShares={selectedTamgHolding.shares}
+            currentPrice={selectedTamgHolding.price}
+            onSuccess={handleLiquidationSuccess}
+          />
+        )}
       </div>
     </AppLayout>
   );
