@@ -92,6 +92,15 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in pb-8">
+        {/* Welcome Message */}
+        {profile?.full_name && (
+          <div className="mb-2">
+            <h1 className="text-2xl font-bold text-foreground">
+              Welcome, {profile.full_name.split(' ')[0]}!
+            </h1>
+          </div>
+        )}
+
         {/* Financial Position Section */}
         <div>
           <h2 className="text-lg font-semibold text-foreground mb-4">Financial Position:</h2>

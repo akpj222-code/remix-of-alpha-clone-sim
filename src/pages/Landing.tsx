@@ -43,44 +43,51 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <TamicLogo size="sm" />
-            <span className="text-xl font-bold text-foreground">TAMIC GROUP</span>
+            <span className="text-lg sm:text-xl font-bold text-foreground">TAMIC GROUP</span>
           </div>
-          <div className="flex items-center gap-2">
-            <StartDemoModal />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="hidden sm:block">
+              <StartDemoModal />
+            </div>
             <Link to="/auth">
-              <Button variant="ghost">Sign In</Button>
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-4">Sign In</Button>
             </Link>
             <Link to="/auth?mode=signup">
-              <Button>Get Started</Button>
+              <Button size="sm" className="text-xs sm:text-sm px-2 sm:px-4">Get Started</Button>
             </Link>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden py-20 md:py-32">
+      <section className="relative overflow-hidden py-12 sm:py-20 md:py-32">
         <div className="absolute inset-0 gradient-hero opacity-5" />
-        <div className="container relative">
+        <div className="container relative px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
               Invest in Your Future with{' '}
               <span className="text-primary">TAMIC GROUP</span>
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground md:text-xl">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg text-muted-foreground md:text-xl px-2">
               Your trusted platform for US stocks and cryptocurrency trading. Start building your investment portfolio today with real-time market data.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/auth?mode=signup">
-                <Button size="lg" className="gap-2">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <Link to="/auth?mode=signup" className="w-full sm:w-auto">
+                <Button size="lg" className="gap-2 w-full sm:w-auto">
                   Start Trading <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <StartDemoModal />
-              <Link to="/auth">
-                <Button size="lg" variant="outline">
+              <div className="sm:hidden w-full">
+                <StartDemoModal />
+              </div>
+              <div className="hidden sm:block">
+                <StartDemoModal />
+              </div>
+              <Link to="/auth" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
                   Sign In
                 </Button>
               </Link>
@@ -90,25 +97,25 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-muted/30">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center text-foreground mb-4">
+      <section className="py-12 sm:py-20 bg-muted/30">
+        <div className="container px-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-foreground mb-3 sm:mb-4">
             Why Choose TAMIC GROUP?
           </h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+          <p className="text-center text-muted-foreground mb-8 sm:mb-12 max-w-2xl mx-auto text-sm sm:text-base px-2">
             Your comprehensive investment platform for stocks and cryptocurrency trading
           </p>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
               <Card key={feature.title} className="border-none shadow-md hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg gradient-primary">
-                    <feature.icon className="h-6 w-6 text-primary-foreground" />
+                <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+                  <div className="mb-3 sm:mb-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg gradient-primary">
+                    <feature.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                   </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">
                     {feature.title}
                   </h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-sm sm:text-base">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -119,14 +126,14 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-20">
-        <div className="container">
+      <section className="py-12 sm:py-20">
+        <div className="container px-4">
           <Card className="gradient-primary border-none">
-            <CardContent className="py-12 text-center">
-              <h2 className="text-3xl font-bold text-primary-foreground mb-4">
+            <CardContent className="py-8 sm:py-12 text-center px-4 sm:px-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground mb-3 sm:mb-4">
                 Ready to Start Investing?
               </h2>
-              <p className="text-primary-foreground/80 mb-8 max-w-lg mx-auto">
+              <p className="text-primary-foreground/80 mb-6 sm:mb-8 max-w-lg mx-auto text-sm sm:text-base">
                 Join thousands of investors who trust TAMIC GROUP for their trading needs. Get started with $10,000 in virtual funds.
               </p>
               <Link to="/auth?mode=signup">
@@ -140,14 +147,14 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="border-t py-6 sm:py-8">
+        <div className="container px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <TamicLogo size="sm" />
               <span className="font-semibold text-foreground">TAMIC GROUP</span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center">
               © {new Date().getFullYear()} TAMIC GROUP. Investment simulation platform.
             </p>
           </div>
