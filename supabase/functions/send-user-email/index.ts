@@ -229,7 +229,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending ${type} email to ${userEmail}`);
 
     const { data, error } = await resend.emails.send({
-      from: "TAMIC GROUP <onboarding@resend.dev>",
+      from: "TAMIC GROUP <support@tamicgroup.com>",
       to: [userEmail],
       subject,
       html: htmlContent,
