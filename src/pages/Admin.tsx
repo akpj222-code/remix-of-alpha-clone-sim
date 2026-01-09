@@ -103,6 +103,7 @@ interface AdminSettings {
   deposit_btc_addresses: string;
   deposit_eth_addresses: string;
   deposit_usdt_addresses: string;
+  deposit_btc_addresses_with_qr: string;
   tamg_share_price: string;
   min_shares_purchase: string;
 }
@@ -136,6 +137,7 @@ export default function Admin() {
     deposit_btc_addresses: '[]',
     deposit_eth_addresses: '[]',
     deposit_usdt_addresses: '[]',
+    deposit_btc_addresses_with_qr: '[]',
     tamg_share_price: '25.00',
     min_shares_purchase: '1',
   });
