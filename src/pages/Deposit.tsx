@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Wallet, Copy, Check, Loader2, Send } from 'lucide-react';
+import { Wallet, Copy, Check, Loader2, Send, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
 
 type CryptoType = 'BTC' | 'ETH' | 'USDT';
+type DepositMethod = 'crypto' | 'bank';
 
 interface BTCAddressWithQR {
   address: string;
@@ -24,13 +26,22 @@ interface DepositDetails {
   usdtAddresses?: string[];
 }
 
+interface BankDetails {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  routingNumber: string;
+}
+
 export default function Deposit() {
   const { profile } = useProfile();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [depositMethod, setDepositMethod] = useState<DepositMethod>('crypto');
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('BTC');
   const [loading, setLoading] = useState(false);
   const [depositDetails, setDepositDetails] = useState<DepositDetails | null>(null);
+  const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [selectedQRCode, setSelectedQRCode] = useState<string | null>(null);
@@ -45,6 +56,7 @@ export default function Deposit() {
   const fetchDepositDetails = async () => {
     setLoading(true);
     setDepositDetails(null);
+    setBankDetails(null);
     setSelectedAddress('');
     
     const loadTime = getRandomLoadTime();
@@ -57,6 +69,8 @@ export default function Deposit() {
     
     if (!error && data) {
       const settings: DepositDetails = {};
+      const bank: Partial<BankDetails> = {};
+      
       data.forEach((item: { setting_key: string; setting_value: string }) => {
         switch (item.setting_key) {
           case 'deposit_btc_addresses':
@@ -71,9 +85,30 @@ export default function Deposit() {
           case 'deposit_usdt_addresses':
             try { settings.usdtAddresses = JSON.parse(item.setting_value); } catch { settings.usdtAddresses = []; }
             break;
+          case 'deposit_bank_name':
+            bank.bankName = item.setting_value;
+            break;
+          case 'deposit_bank_account_name':
+            bank.accountName = item.setting_value;
+            break;
+          case 'deposit_bank_account':
+            bank.accountNumber = item.setting_value;
+            break;
+          case 'deposit_bank_routing':
+            bank.routingNumber = item.setting_value;
+            break;
         }
       });
       setDepositDetails(settings);
+      
+      if (bank.bankName || bank.accountName || bank.accountNumber || bank.routingNumber) {
+        setBankDetails({
+          bankName: bank.bankName || '',
+          accountName: bank.accountName || '',
+          accountNumber: bank.accountNumber || '',
+          routingNumber: bank.routingNumber || '',
+        });
+      }
       
       // Select random address for current crypto
       selectRandomAddress(settings, selectedCrypto);
@@ -151,13 +186,17 @@ export default function Deposit() {
 
     setSubmittingDeposit(true);
 
+    const method = depositMethod === 'bank' ? 'bank' : selectedCrypto.toLowerCase();
+
     const { error } = await supabase.from('transactions').insert({
       user_id: user.id,
       type: 'deposit',
-      method: selectedCrypto.toLowerCase(),
+      method: method,
       amount: amount,
       status: 'pending',
-      notes: `User initiated ${selectedCrypto} crypto deposit. Wallet ID: ${profile?.wallet_id || 'N/A'}`,
+      notes: depositMethod === 'bank' 
+        ? `User initiated bank deposit. Wallet ID: ${profile?.wallet_id || 'N/A'}`
+        : `User initiated ${selectedCrypto} crypto deposit. Wallet ID: ${profile?.wallet_id || 'N/A'}`,
     });
 
     // Send email notification to user
@@ -167,7 +206,7 @@ export default function Deposit() {
           type: 'deposit',
           user_id: user.id,
           amount: amount,
-          currency: selectedCrypto,
+          currency: depositMethod === 'bank' ? 'USD' : selectedCrypto,
         }
       });
     } catch (emailError) {
@@ -207,6 +246,8 @@ export default function Deposit() {
     { code: 'ETH', name: 'Ethereum', network: 'ERC20', icon: <EthDiamondIcon className="h-5 w-5 text-blue-500" /> },
     { code: 'USDT', name: 'Tether', network: 'TRC20', icon: <span className="text-lg text-green-500">₮</span> },
   ];
+
+  const hasBankDetails = bankDetails && (bankDetails.bankName || bankDetails.accountNumber);
 
   return (
     <AppLayout>
@@ -250,124 +291,254 @@ export default function Deposit() {
           </Card>
         )}
 
-        {/* Crypto Deposit */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Cryptocurrency Deposit</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Send cryptocurrency to receive equivalent USD in your account.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Crypto Selection */}
-            <div className="flex gap-2">
-              {cryptoOptions.map((crypto) => (
-                <Button
-                  key={crypto.code}
-                  variant={selectedCrypto === crypto.code ? 'default' : 'outline'}
-                  className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
-                  onClick={() => setSelectedCrypto(crypto.code)}
-                >
-                  {crypto.icon}
-                  <span>{crypto.code}</span>
-                  {crypto.network && (
-                    <span className="hidden sm:inline text-[10px] opacity-70">({crypto.network})</span>
-                  )}
-                </Button>
-              ))}
-            </div>
+        {/* Deposit Method Tabs */}
+        <Tabs value={depositMethod} onValueChange={(v) => setDepositMethod(v as DepositMethod)} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="crypto" className="gap-2">
+              <span className="text-orange-500">₿</span>
+              Crypto
+            </TabsTrigger>
+            <TabsTrigger value="bank" className="gap-2" disabled={!hasBankDetails}>
+              <Building2 className="h-4 w-4" />
+              Bank Transfer
+            </TabsTrigger>
+          </TabsList>
 
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Fetching secure wallet address...</p>
-                <p className="text-xs text-muted-foreground mt-1">Please wait</p>
-              </div>
-            ) : selectedAddress ? (
-              <div className="space-y-4">
-                {/* QR Code for BTC (if available) */}
-                {selectedCrypto === 'BTC' && selectedQRCode && (
-                  <div className="flex justify-center p-4 bg-white rounded-lg">
-                    <img 
-                      src={selectedQRCode} 
-                      alt="BTC QR Code" 
-                      className="w-48 h-48 object-contain"
-                    />
+          {/* Crypto Deposit Tab */}
+          <TabsContent value="crypto" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Cryptocurrency Deposit</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Send cryptocurrency to receive equivalent USD in your account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Crypto Selection */}
+                <div className="flex gap-2">
+                  {cryptoOptions.map((crypto) => (
+                    <Button
+                      key={crypto.code}
+                      variant={selectedCrypto === crypto.code ? 'default' : 'outline'}
+                      className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
+                      onClick={() => setSelectedCrypto(crypto.code)}
+                    >
+                      {crypto.icon}
+                      <span>{crypto.code}</span>
+                      {crypto.network && (
+                        <span className="hidden sm:inline text-[10px] opacity-70">({crypto.network})</span>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                    <p className="text-sm text-muted-foreground">Fetching secure wallet address...</p>
+                    <p className="text-xs text-muted-foreground mt-1">Please wait</p>
+                  </div>
+                ) : selectedAddress ? (
+                  <div className="space-y-4">
+                    {/* QR Code for BTC (if available) */}
+                    {selectedCrypto === 'BTC' && selectedQRCode && (
+                      <div className="flex justify-center p-4 bg-white rounded-lg">
+                        <img 
+                          src={selectedQRCode} 
+                          alt="BTC QR Code" 
+                          className="w-48 h-48 object-contain"
+                        />
+                      </div>
+                    )}
+
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {selectedCrypto} Deposit Address 
+                        {cryptoOptions.find(c => c.code === selectedCrypto)?.network && 
+                          ` (${cryptoOptions.find(c => c.code === selectedCrypto)?.network})`
+                        }
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-[10px] sm:text-sm text-foreground break-all flex-1">
+                          {selectedAddress}
+                        </p>
+                        <CopyButton 
+                          text={selectedAddress} 
+                          label={`${selectedCrypto} Address`} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-sm text-destructive font-medium">Warning</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Only send {selectedCrypto} to this address. Sending other cryptocurrencies may result in permanent loss.
+                      </p>
+                    </div>
+
+                    <div className="p-3 sm:p-4 bg-muted/30 rounded-lg space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        • Minimum deposit: {selectedCrypto === 'BTC' ? '0.0005 BTC' : selectedCrypto === 'ETH' ? '0.01 ETH' : '50 USDT'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        • Processing time: 3-6 network confirmations
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        • Your balance will be credited at current market rate
+                      </p>
+                    </div>
+
+                    {/* I Have Deposited Section */}
+                    <div className="p-4 bg-success/5 border border-success/20 rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-foreground">Already sent your crypto?</p>
+                      <p className="text-xs text-muted-foreground">Enter the USD equivalent and click the button below to notify our team for faster processing.</p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Amount (USD)"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={handleDepositNotification}
+                          disabled={submittingDeposit || !depositAmount}
+                          className="gap-2"
+                        >
+                          {submittingDeposit ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          I Have Deposited
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground text-sm">No deposit address available for {selectedCrypto}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Please contact support</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    {selectedCrypto} Deposit Address 
-                    {cryptoOptions.find(c => c.code === selectedCrypto)?.network && 
-                      ` (${cryptoOptions.find(c => c.code === selectedCrypto)?.network})`
-                    }
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono text-[10px] sm:text-sm text-foreground break-all flex-1">
-                      {selectedAddress}
-                    </p>
-                    <CopyButton 
-                      text={selectedAddress} 
-                      label={`${selectedCrypto} Address`} 
-                    />
+          {/* Bank Transfer Tab */}
+          <TabsContent value="bank" className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Bank Transfer Deposit</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Transfer funds directly from your bank account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                    <p className="text-sm text-muted-foreground">Fetching bank details...</p>
                   </div>
-                </div>
+                ) : bankDetails ? (
+                  <div className="space-y-4">
+                    {/* Bank Details */}
+                    {bankDetails.bankName && (
+                      <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Bank Name</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-foreground">{bankDetails.bankName}</p>
+                          <CopyButton text={bankDetails.bankName} label="Bank Name" />
+                        </div>
+                      </div>
+                    )}
 
-                <div className="p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-sm text-destructive font-medium">Warning</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Only send {selectedCrypto} to this address. Sending other cryptocurrencies may result in permanent loss.
-                  </p>
-                </div>
+                    {bankDetails.accountName && (
+                      <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Account Name</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-foreground">{bankDetails.accountName}</p>
+                          <CopyButton text={bankDetails.accountName} label="Account Name" />
+                        </div>
+                      </div>
+                    )}
 
-                <div className="p-3 sm:p-4 bg-muted/30 rounded-lg space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    • Minimum deposit: {selectedCrypto === 'BTC' ? '0.0005 BTC' : selectedCrypto === 'ETH' ? '0.01 ETH' : '50 USDT'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    • Processing time: 3-6 network confirmations
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    • Your balance will be credited at current market rate
-                  </p>
-                </div>
+                    {bankDetails.accountNumber && (
+                      <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Account Number</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-mono font-medium text-foreground">{bankDetails.accountNumber}</p>
+                          <CopyButton text={bankDetails.accountNumber} label="Account Number" />
+                        </div>
+                      </div>
+                    )}
 
-                {/* I Have Deposited Section */}
-                <div className="p-4 bg-success/5 border border-success/20 rounded-lg space-y-3">
-                  <p className="text-sm font-medium text-foreground">Already sent your crypto?</p>
-                  <p className="text-xs text-muted-foreground">Enter the USD equivalent and click the button below to notify our team for faster processing.</p>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Amount (USD)"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button 
-                      onClick={handleDepositNotification}
-                      disabled={submittingDeposit || !depositAmount}
-                      className="gap-2"
-                    >
-                      {submittingDeposit ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                      I Have Deposited
-                    </Button>
+                    {bankDetails.routingNumber && (
+                      <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Routing Number</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-mono font-medium text-foreground">{bankDetails.routingNumber}</p>
+                          <CopyButton text={bankDetails.routingNumber} label="Routing Number" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-3 sm:p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                      <p className="text-sm text-primary font-medium">Important</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Please include your Wallet ID ({profile?.wallet_id || 'N/A'}) in the transfer reference/memo for faster processing.
+                      </p>
+                    </div>
+
+                    <div className="p-3 sm:p-4 bg-muted/30 rounded-lg space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        • Minimum deposit: $100 USD
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        • Processing time: 1-3 business days
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        • Your balance will be credited once transfer is confirmed
+                      </p>
+                    </div>
+
+                    {/* I Have Deposited Section */}
+                    <div className="p-4 bg-success/5 border border-success/20 rounded-lg space-y-3">
+                      <p className="text-sm font-medium text-foreground">Already made the transfer?</p>
+                      <p className="text-xs text-muted-foreground">Enter the amount transferred and click the button below to notify our team for faster processing.</p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Amount (USD)"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={handleDepositNotification}
+                          disabled={submittingDeposit || !depositAmount}
+                          className="gap-2"
+                        >
+                          {submittingDeposit ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          I Have Deposited
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground text-sm">No deposit address available for {selectedCrypto}</p>
-                <p className="text-xs text-muted-foreground mt-1">Please contact support</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground text-sm">Bank deposit is not available</p>
+                    <p className="text-xs text-muted-foreground mt-1">Please use cryptocurrency deposit or contact support</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
