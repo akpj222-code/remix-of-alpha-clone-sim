@@ -132,7 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'TAMIC GROUP <support@tamicgroup.com>',
+          from: 'TAMIC GROUP <noreply@tamicgroup.com>',
           to: [adminEmail],
           subject,
           html: htmlContent,
