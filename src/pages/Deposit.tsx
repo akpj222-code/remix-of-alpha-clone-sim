@@ -31,6 +31,7 @@ interface BankDetails {
   accountName: string;
   accountNumber: string;
   routingNumber: string;
+  accountType: string;
 }
 
 export default function Deposit() {
@@ -97,6 +98,9 @@ export default function Deposit() {
           case 'deposit_bank_routing':
             bank.routingNumber = item.setting_value;
             break;
+          case 'deposit_bank_account_type':
+            bank.accountType = item.setting_value;
+            break;
         }
       });
       setDepositDetails(settings);
@@ -107,6 +111,7 @@ export default function Deposit() {
           accountName: bank.accountName || '',
           accountNumber: bank.accountNumber || '',
           routingNumber: bank.routingNumber || '',
+          accountType: bank.accountType || '',
         });
       }
       
@@ -469,6 +474,16 @@ export default function Deposit() {
                         <div className="flex items-center justify-between gap-2">
                           <p className="font-mono font-medium text-foreground">{bankDetails.accountNumber}</p>
                           <CopyButton text={bankDetails.accountNumber} label="Account Number" />
+                        </div>
+                      </div>
+                    )}
+
+                    {bankDetails.accountType && (
+                      <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Account Type</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-foreground capitalize">{bankDetails.accountType}</p>
+                          <CopyButton text={bankDetails.accountType} label="Account Type" />
                         </div>
                       </div>
                     )}
