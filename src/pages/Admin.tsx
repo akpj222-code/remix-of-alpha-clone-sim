@@ -97,6 +97,7 @@ interface AdminSettings {
   deposit_bank_account: string;
   deposit_bank_routing: string;
   deposit_bank_account_name: string;
+  deposit_bank_account_type: string;
   deposit_btc_address: string;
   deposit_eth_address: string;
   deposit_usdt_address: string;
@@ -131,6 +132,7 @@ export default function Admin() {
     deposit_bank_account: '',
     deposit_bank_routing: '',
     deposit_bank_account_name: '',
+    deposit_bank_account_type: '',
     deposit_btc_address: '',
     deposit_eth_address: '',
     deposit_usdt_address: '',
@@ -1173,6 +1175,17 @@ export default function Admin() {
                       onChange={(e) => setAdminSettings({ ...adminSettings, deposit_bank_routing: e.target.value })}
                     />
                     <Button onClick={() => updateAdminSetting('deposit_bank_routing', adminSettings.deposit_bank_routing)}>Save</Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Account Type</label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      value={adminSettings.deposit_bank_account_type}
+                      onChange={(e) => setAdminSettings({ ...adminSettings, deposit_bank_account_type: e.target.value })}
+                      placeholder="e.g., Savings, Current, Checking"
+                    />
+                    <Button onClick={() => updateAdminSetting('deposit_bank_account_type', adminSettings.deposit_bank_account_type)}>Save</Button>
                   </div>
                 </div>
               </CardContent>
