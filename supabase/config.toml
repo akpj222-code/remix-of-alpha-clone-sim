@@ -2,3 +2,15 @@ project_id = "ulocrddefljecougorye"
 
 [functions.send-user-email]
 verify_jwt = false
+
+[functions.verify-reset-token]
+verify_jwt = false
+
+[functions.stock-prices]
+verify_jwt = false
+
+[functions.crypto-prices]
+verify_jwt = false
+
+[functions.send-admin-email]
+verify_jwt = false

@@ -52,19 +52,61 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<'signin' | 'signup' | 'forgot-password' | 'reset-password'>('signin');
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [resetEmail, setResetEmail] = useState<string | null>(null);
   
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if this is a password reset callback
+  // Check if this is a password reset callback (custom token or Supabase recovery)
   useEffect(() => {
+    // Check for custom reset token in URL params
+    const tokenFromUrl = searchParams.get('reset_token');
+    if (tokenFromUrl) {
+      setResetToken(tokenFromUrl);
+      verifyResetToken(tokenFromUrl);
+      return;
+    }
+    
+    // Fallback: Check for Supabase recovery hash
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const type = hashParams.get('type');
     if (type === 'recovery') {
       setView('reset-password');
     }
-  }, []);
+  }, [searchParams]);
+
+  const verifyResetToken = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-reset-token', {
+        body: { token }
+      });
+
+      if (error || data?.error) {
+        toast({
+          title: 'Invalid Link',
+          description: data?.error || 'This reset link is invalid or has expired.',
+          variant: 'destructive',
+        });
+        setView('signin');
+      } else if (data?.valid) {
+        setResetEmail(data.email);
+        setView('reset-password');
+      }
+    } catch (err) {
+      console.error('Token verification error:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to verify reset link. Please try again.',
+        variant: 'destructive',
+      });
+      setView('signin');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user && view !== 'reset-password') {
@@ -173,47 +215,87 @@ export default function Auth() {
 
   const handleForgotPassword = async (values: ForgotPasswordValues) => {
     setIsLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/auth`,
-    });
-    setIsLoading(false);
-
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
+    try {
+      // Use custom branded email via edge function
+      const { data, error } = await supabase.functions.invoke('send-user-email', {
+        body: {
+          type: 'password_reset',
+          email: values.email,
+        }
       });
-    } else {
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: 'Check your email',
-        description: 'We sent you a password reset link. Please check your inbox.',
+        description: 'If an account exists with this email, we sent you a password reset link.',
       });
       setView('signin');
+    } catch (err: any) {
+      console.error('Forgot password error:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to send reset email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleResetPassword = async (values: ResetPasswordValues) => {
     setIsLoading(true);
-    const { error } = await supabase.auth.updateUser({
-      password: values.password,
-    });
-    setIsLoading(false);
+    
+    try {
+      // If we have a custom reset token, use the edge function
+      if (resetToken) {
+        const { data, error } = await supabase.functions.invoke('verify-reset-token', {
+          body: { 
+            token: resetToken,
+            new_password: values.password 
+          }
+        });
 
-    if (error) {
+        if (error || data?.error) {
+          throw new Error(data?.error || 'Failed to reset password');
+        }
+
+        toast({
+          title: 'Password updated',
+          description: 'Your password has been reset successfully. You can now sign in.',
+        });
+        
+        // Clear token and redirect
+        setResetToken(null);
+        setResetEmail(null);
+        navigate('/auth', { replace: true });
+        setView('signin');
+      } else {
+        // Fallback: Use Supabase auth for hash-based recovery
+        const { error } = await supabase.auth.updateUser({
+          password: values.password,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: 'Password updated',
+          description: 'Your password has been reset successfully. You can now sign in.',
+        });
+        window.location.hash = '';
+        setView('signin');
+      }
+    } catch (err: any) {
+      console.error('Reset password error:', err);
       toast({
         title: 'Error',
-        description: error.message,
+        description: err.message || 'Failed to reset password. Please try again.',
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: 'Password updated',
-        description: 'Your password has been reset successfully. You can now sign in.',
-      });
-      // Clear hash and redirect to sign in
-      window.location.hash = '';
-      setView('signin');
+    } finally {
+      setIsLoading(false);
     }
   };
 
