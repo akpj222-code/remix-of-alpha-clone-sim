@@ -10,13 +10,21 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: 'welcome' | 'new_device' | 'deposit' | 'withdrawal' | 'promotional';
+  type: 'welcome' | 'new_device' | 'deposit' | 'withdrawal' | 'promotional' | 'password_reset';
   user_id?: string;
   email?: string;
   name?: string;
   amount?: number;
   currency?: string;
   device_info?: string;
+  reset_url?: string;
+}
+
+// Generate a secure random token
+function generateToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -59,6 +67,90 @@ const handler = async (req: Request): Promise<Response> => {
     let htmlContent = "";
 
     switch (type) {
+      case 'password_reset':
+        // Check if user exists in profiles
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('email', userEmail)
+          .single();
+
+        if (!userProfile) {
+          // Don't reveal if email exists or not for security
+          console.log(`Password reset requested for non-existent email: ${userEmail}`);
+          return new Response(
+            JSON.stringify({ success: true, message: "If this email exists, a reset link has been sent" }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
+        // Generate token and expiration (1 hour)
+        const token = generateToken();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // Invalidate any existing tokens for this email
+        await supabase
+          .from('password_reset_tokens')
+          .update({ used: true })
+          .eq('email', userEmail)
+          .eq('used', false);
+
+        // Store the new token
+        const { error: tokenError } = await supabase
+          .from('password_reset_tokens')
+          .insert({
+            email: userEmail,
+            token: token,
+            expires_at: expiresAt.toISOString(),
+          });
+
+        if (tokenError) {
+          console.error("Error storing reset token:", tokenError);
+          return new Response(
+            JSON.stringify({ error: "Failed to generate reset token" }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
+        const resetUrl = `https://tamic.lovable.app/auth?reset_token=${token}`;
+        userName = userProfile.full_name || 'Investor';
+
+        subject = "Reset Your Password - TAMIC GROUP";
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #1a1a2e; margin: 0;">TAMIC GROUP</h1>
+              <p style="color: #666; margin-top: 5px;">Password Reset Request</p>
+            </div>
+            <h2 style="color: #1a1a2e;">Reset Your Password 🔐</h2>
+            <p style="color: #444; line-height: 1.6;">
+              Hello ${userName},
+            </p>
+            <p style="color: #444; line-height: 1.6;">
+              We received a request to reset your password. Click the button below to create a new password:
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background: #1a1a2e; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                Reset Password
+              </a>
+            </div>
+            <p style="color: #666; line-height: 1.6; font-size: 14px;">
+              This link will expire in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.
+            </p>
+            <p style="color: #666; line-height: 1.6; font-size: 14px;">
+              Or copy and paste this link into your browser:
+            </p>
+            <p style="color: #888; font-size: 12px; word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+              ${resetUrl}
+            </p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+            <p style="color: #666; font-size: 12px; text-align: center;">
+              © ${new Date().getFullYear()} TAMIC GROUP. All rights reserved.
+            </p>
+          </div>
+        `;
+        break;
+
       case 'welcome':
         subject = "Welcome to TAMIC GROUP! 🎉";
         htmlContent = `
