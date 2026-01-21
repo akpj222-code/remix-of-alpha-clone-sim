@@ -237,37 +237,26 @@ export default function Auth() {
               </CardDescription>
             </CardHeader>
             <CardContent className="px-0">
-              <Form {...forgotPasswordForm}>
-                <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-6">
-                  <FormField
-                    control={forgotPasswordForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-foreground">Email Address</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="email" 
-                            placeholder="Enter your email" 
-                            className="bg-card border-border h-12 rounded-lg" 
-                            autoComplete="email"
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-6">
+                <div className="space-y-2">
+                  <label htmlFor="forgot-email" className="text-sm font-medium text-foreground">Email Address</label>
+                  <input 
+                    id="forgot-email"
+                    type="email" 
+                    placeholder="Enter your email" 
+                    className="flex h-12 w-full rounded-lg border border-border bg-card px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    autoComplete="email"
+                    {...forgotPasswordForm.register('email')}
                   />
-                  <Button type="submit" className="w-full h-12 rounded-xl text-md font-medium" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Send Reset Link
-                  </Button>
-                </form>
-              </Form>
+                  {forgotPasswordForm.formState.errors.email && (
+                    <p className="text-sm font-medium text-destructive">{forgotPasswordForm.formState.errors.email.message}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full h-12 rounded-xl text-md font-medium" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Reset Link
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>
