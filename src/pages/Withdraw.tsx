@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { useAltMode } from '@/hooks/useAltMode';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
@@ -39,6 +40,8 @@ export default function WithdrawPage() {
   
   const [step, setStep] = useState<WithdrawStep>('select');
   const [method, setMethod] = useState<WithdrawMethod>('bank');
+  const { enabled: altMode } = useAltMode();
+  useEffect(() => { if (altMode) setMethod('crypto'); }, [altMode]);
   const [cryptoType, setCryptoType] = useState<CryptoType>('btc');
   const [amount, setAmount] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
@@ -293,7 +296,7 @@ export default function WithdrawPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <RadioGroup value={method} onValueChange={(v) => setMethod(v as WithdrawMethod)}>
-                <div 
+                {!altMode && <div 
                   className={`flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors ${method === 'bank' ? 'border-primary bg-primary/5' : 'border-border'}`}
                   onClick={() => setMethod('bank')}
                 >
@@ -306,7 +309,8 @@ export default function WithdrawPage() {
                       <p className="text-xs text-destructive mt-1">Bank details not configured</p>
                     )}
                   </div>
-                </div>
+                </div>}
+
 
                 <div 
                   className={`flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors ${method === 'crypto' ? 'border-primary bg-primary/5' : 'border-border'}`}
