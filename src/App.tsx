@@ -13,6 +13,7 @@ import { KilledScreen } from "@/components/KilledScreen";
 import { SupportChat } from "@/components/support/SupportChat";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { DemoTutorial } from "@/components/demo/DemoTutorial";
+import { AltModeThemeApplier } from "@/hooks/useAltMode";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -47,6 +48,7 @@ function AppContent() {
 
   return (
     <BrowserRouter>
+      <AltModeThemeApplier />
       <div className={isDemoMode ? "pt-8" : ""}>
         <DemoBanner />
         <Routes>

@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { useAltMode } from '@/hooks/useAltMode';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
@@ -37,6 +38,7 @@ interface BankDetails {
 export default function Deposit() {
   const { profile } = useProfile();
   const { user } = useAuth();
+  const { enabled: altMode } = useAltMode();
   const { toast } = useToast();
   const [depositMethod, setDepositMethod] = useState<DepositMethod>('crypto');
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('BTC');
@@ -297,16 +299,18 @@ export default function Deposit() {
         )}
 
         {/* Deposit Method Tabs */}
-        <Tabs value={depositMethod} onValueChange={(v) => setDepositMethod(v as DepositMethod)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={altMode ? 'crypto' : depositMethod} onValueChange={(v) => setDepositMethod(v as DepositMethod)} className="w-full">
+          <TabsList className={altMode ? "grid w-full grid-cols-1" : "grid w-full grid-cols-2"}>
             <TabsTrigger value="crypto" className="gap-2">
               <span className="text-orange-500">₿</span>
               Crypto
             </TabsTrigger>
-            <TabsTrigger value="bank" className="gap-2" disabled={!hasBankDetails}>
-              <Building2 className="h-4 w-4" />
-              Bank Transfer
-            </TabsTrigger>
+            {!altMode && (
+              <TabsTrigger value="bank" className="gap-2" disabled={!hasBankDetails}>
+                <Building2 className="h-4 w-4" />
+                Bank Transfer
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Crypto Deposit Tab */}

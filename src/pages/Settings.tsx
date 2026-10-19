@@ -13,12 +13,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { DemoToggle } from '@/components/demo/DemoToggle';
+import { Switch } from '@/components/ui/switch';
+import { useAltMode } from '@/hooks/useAltMode';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { profile, fetchProfile } = useProfile();
   const { isAdmin, user, signOut } = useAuth();
   const { toast } = useToast();
+  const { enabled: altMode, setMode: setAltMode } = useAltMode();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -196,6 +199,27 @@ export default function Settings() {
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               </Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Admin-only: temporary crypto-only mode + simplified design */}
+        {isAdmin && (
+          <Card>
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground">Simplified Mode</p>
+                <p className="text-sm text-muted-foreground">Crypto-only deposits and calmer design for all users. Bank details stay saved.</p>
+              </div>
+              <Switch
+                checked={altMode}
+                onCheckedChange={async (v) => {
+                  const { error } = await setAltMode(v);
+                  toast(error
+                    ? { title: 'Could not update', description: error.message, variant: 'destructive' }
+                    : { title: v ? 'Simplified mode on' : 'Back to normal' });
+                }}
+              />
             </CardContent>
           </Card>
         )}
