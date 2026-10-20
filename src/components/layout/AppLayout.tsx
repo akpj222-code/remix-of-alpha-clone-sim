@@ -8,6 +8,7 @@ import { useDemo } from '@/hooks/useDemo';
 import { TamicLogo } from '@/components/TamicLogo';
 import { DemoToggle } from '@/components/demo/DemoToggle';
 import { cn } from '@/lib/utils';
+import { useAltMode } from '@/hooks/useAltMode';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -32,6 +33,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { user, isAdmin, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { isDemoMode } = useDemo();
+  const { enabled: cryptoOnly } = useAltMode();
+  const visibleNavItems = cryptoOnly ? navItems.filter(item => item.path !== '/stocks') : navItems;
+  const visibleMobileItems = cryptoOnly
+    ? mobileNavItems.map(item => item.path === '/deposit' ? { path: '/crypto', label: 'Markets', icon: Bitcoin } : item)
+    : mobileNavItems;
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -50,7 +56,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <Link key={item.path} to={item.path}>
                 <Button
                   variant={location.pathname === item.path ? 'secondary' : 'ghost'}
@@ -94,7 +100,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur lg:hidden safe-area-bottom">
         <div className="flex items-center justify-around py-2 px-1">
-          {mobileNavItems.map((item) => (
+          {visibleMobileItems.map((item) => (
             <Link key={item.path} to={item.path} className="flex-1">
               <Button
                 variant="ghost"

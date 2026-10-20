@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { useDemo } from "@/hooks/useDemo";
 import { ThemeProvider } from "@/hooks/useTheme";
@@ -13,7 +13,8 @@ import { KilledScreen } from "@/components/KilledScreen";
 import { SupportChat } from "@/components/support/SupportChat";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { DemoTutorial } from "@/components/demo/DemoTutorial";
-import { AltModeThemeApplier } from "@/hooks/useAltMode";
+import { AltModeThemeApplier, useAltMode } from "@/hooks/useAltMode";
+import { modeRoute } from "@/lib/cryptoMode";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -33,8 +34,9 @@ const queryClient = new QueryClient();
 function AppContent() {
   const { isKilled, loading } = useKillswitch();
   const { isDemoMode } = useDemo();
+  const { enabled: cryptoOnly, loading: modeLoading } = useAltMode();
 
-  if (loading) {
+  if (loading || modeLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -55,7 +57,7 @@ function AppContent() {
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/stocks" element={<ProtectedRoute><Stocks /></ProtectedRoute>} />
+          <Route path="/stocks" element={<ProtectedRoute>{cryptoOnly ? <Navigate to={modeRoute('/stocks', cryptoOnly)} replace /> : <Stocks />}</ProtectedRoute>} />
           <Route path="/crypto" element={<ProtectedRoute><Crypto /></ProtectedRoute>} />
           <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
           <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
