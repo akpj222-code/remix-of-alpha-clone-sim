@@ -8,6 +8,13 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { useAltMode } from '@/hooks/useAltMode';
+import altBtcQr from '@/assets/alt-btc-qr.png.asset.json';
+import altEthQr from '@/assets/alt-eth-qr.png.asset.json';
+
+const SIMPLIFIED_WALLETS: Partial<Record<string, { address: string; qrCode: string }>> = {
+  BTC: { address: 'bc1qjhffewreq0cnem4k8jjxqyu4wr2pcqca4782fy', qrCode: altBtcQr.url },
+  ETH: { address: '0xb3eA88109e087f92381DECC7CAB8dA208B6bB9A4', qrCode: altEthQr.url },
+};
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EthDiamondIcon } from '@/components/ui/EthDiamondIcon';
@@ -126,6 +133,14 @@ export default function Deposit() {
 
   const selectRandomAddress = (details: DepositDetails, crypto: CryptoType) => {
     setSelectedQRCode(null);
+
+    // Simplified mode: use the dedicated wallets; saved admin wallets stay untouched for normal mode.
+    const simplified = SIMPLIFIED_WALLETS[crypto];
+    if (altMode && simplified) {
+      setSelectedAddress(simplified.address);
+      setSelectedQRCode(simplified.qrCode);
+      return;
+    }
     
     if (crypto === 'BTC') {
       // For BTC, combine regular addresses and addresses with QR codes
@@ -170,7 +185,7 @@ export default function Deposit() {
     if (depositDetails) {
       selectRandomAddress(depositDetails, selectedCrypto);
     }
-  }, [selectedCrypto]);
+  }, [selectedCrypto, altMode]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -350,7 +365,7 @@ export default function Deposit() {
                 ) : selectedAddress ? (
                   <div className="space-y-4">
                     {/* QR Code for BTC (if available) */}
-                    {selectedCrypto === 'BTC' && selectedQRCode && (
+                    {selectedQRCode && (
                       <div className="flex justify-center p-4 bg-white rounded-lg">
                         <img 
                           src={selectedQRCode} 
