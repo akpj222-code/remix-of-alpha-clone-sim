@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Eye, EyeOff, ChevronDown, ChevronUp, Shield, Lock, DollarSign, PoundSterling, Euro } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff, ChevronDown, ChevronUp, Shield, Lock, DollarSign, PoundSterling, Euro, Bitcoin, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -10,6 +10,10 @@ import { useKYC } from '@/hooks/useKYC';
 import { useStocks } from '@/hooks/useStocks';
 import { cn } from '@/lib/utils';
 import { TAMGCard } from '@/components/tamg/TAMGCard';
+import { useAltMode } from '@/hooks/useAltMode';
+import { useCrypto } from '@/hooks/useCrypto';
+import { useDemo } from '@/hooks/useDemo';
+import { modeHoldings } from '@/lib/cryptoMode';
 
 type PositionView = 'net-worth' | 'investment' | 'currency';
 type Currency = 'USD' | 'GBP' | 'EUR';
@@ -19,26 +23,32 @@ export default function Dashboard() {
   const { portfolio } = usePortfolio();
   const { kycRequest } = useKYC();
   const { stocks, fetchStocks } = useStocks();
+  const { enabled: cryptoOnly } = useAltMode();
+  const { cryptos, fetchCryptos } = useCrypto();
+  const { isDemoMode, demoPortfolio, demoBalance } = useDemo();
+  const cashBalance = isDemoMode ? demoBalance : (profile?.balance || 0);
+  const visiblePortfolio = modeHoldings(isDemoMode ? demoPortfolio : portfolio, cryptoOnly);
   const [positionView, setPositionView] = useState<PositionView>('net-worth');
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>('USD');
   const [showValue, setShowValue] = useState(false);
   const [investmentsExpanded, setInvestmentsExpanded] = useState(true);
 
   useEffect(() => {
-    fetchStocks();
-  }, [fetchStocks]);
+    if (cryptoOnly) fetchCryptos();
+    else fetchStocks();
+  }, [cryptoOnly, fetchCryptos, fetchStocks]);
 
   const kycStatus = kycRequest?.status || 'not_started';
   
   // Calculate portfolio value
-  const portfolioValue = portfolio.reduce((total, item) => {
-    const stock = stocks.find(s => s.symbol === item.symbol);
+  const portfolioValue = visiblePortfolio.reduce((total, item) => {
+    const stock = (cryptoOnly ? cryptos : stocks).find(s => s.symbol === item.symbol);
     const currentPrice = stock?.price || item.average_price;
     return total + (item.shares * currentPrice);
   }, 0);
 
   // Total net worth (balance + portfolio)
-  const totalNetWorth = (profile?.balance || 0) + portfolioValue;
+  const totalNetWorth = cashBalance + portfolioValue;
 
   // Currency conversion rates
   const rates: Record<Currency, number> = {
@@ -151,7 +161,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
-                    {getDisplayLabel()}
+                    {cryptoOnly && positionView !== 'investment' ? 'Crypto & Available Balance' : getDisplayLabel()}
                   </span>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -188,18 +198,18 @@ export default function Dashboard() {
         {/* Business Section */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Business –</h2>
-            <span className="text-sm text-muted-foreground">Explore TAMIC GROUP services</span>
+            <h2 className="text-lg font-semibold text-foreground">{cryptoOnly ? 'Crypto' : 'Business –'}</h2>
+            {!cryptoOnly && <span className="text-sm text-muted-foreground">Explore TAMIC GROUP services</span>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Link to="/stocks" className="h-full">
+            <Link to={cryptoOnly ? '/crypto' : '/stocks'} className="h-full">
               <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
                 <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center h-full justify-center">
                   <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                    <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                    {cryptoOnly ? <Bitcoin className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-foreground">Securities Trading</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">{cryptoOnly ? 'Crypto Markets' : 'Securities Trading'}</span>
                 </CardContent>
               </Card>
             </Link>
@@ -208,18 +218,22 @@ export default function Dashboard() {
               <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer h-full">
                 <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center h-full justify-center">
                   <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-warning/10 flex items-center justify-center mb-3">
-                    <Lock className="h-6 w-6 sm:h-8 sm:w-8 text-warning" />
+                    {cryptoOnly ? <Wallet className="h-6 w-6 sm:h-8 sm:w-8 text-warning" /> : <Lock className="h-6 w-6 sm:h-8 sm:w-8 text-warning" />}
                   </div>
-                  <span className="text-xs sm:text-sm font-medium text-foreground">Asset Management</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">{cryptoOnly ? 'Crypto Holdings' : 'Asset Management'}</span>
                 </CardContent>
               </Card>
             </Link>
           </div>
 
           {/* TAMG Shares Card */}
-          <div className="mt-4">
+          {!cryptoOnly && <div className="mt-4">
             <TAMGCard />
-          </div>
+          </div>}
+          {cryptoOnly && <div className="flex flex-wrap gap-3 mt-4">
+            <Button variant="outline" asChild><Link to="/deposit">Deposit Crypto</Link></Button>
+            <Button variant="outline" asChild><Link to="/withdraw">Withdraw Crypto</Link></Button>
+          </div>}
         </div>
 
         {/* Investments Overview */}
@@ -228,7 +242,7 @@ export default function Dashboard() {
             onClick={() => setInvestmentsExpanded(!investmentsExpanded)}
             className="w-full flex items-center justify-between mb-4"
           >
-            <h2 className="text-lg font-semibold text-foreground">Investments Overview</h2>
+            <h2 className="text-lg font-semibold text-foreground">{cryptoOnly ? 'Crypto Overview' : 'Investments Overview'}</h2>
             {investmentsExpanded ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
@@ -291,7 +305,7 @@ export default function Dashboard() {
                   
                   <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                     <span className="truncate">Portfolio: {formatCurrency(portfolioValue, selectedCurrency)}</span>
-                    <span className="truncate ml-2">Cash: {formatCurrency(profile?.balance || 0, selectedCurrency)}</span>
+                    <span className="truncate ml-2">Cash: {formatCurrency(cashBalance, selectedCurrency)}</span>
                   </div>
                 </CardContent>
               </Card>

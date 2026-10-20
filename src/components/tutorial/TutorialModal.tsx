@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Wallet, TrendingUp, Shield, ArrowDownToLine, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAltMode } from '@/hooks/useAltMode';
 
 interface TutorialStep {
   title: string;
@@ -76,10 +77,19 @@ const adminSteps: TutorialStep[] = [
 ];
 
 export function TutorialModal({ isAdmin = false, onComplete }: TutorialModalProps) {
+  const { enabled: cryptoOnly } = useAltMode();
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   
-  const steps = isAdmin ? adminSteps : userSteps;
+  const steps = (isAdmin ? adminSteps : userSteps).map(step => {
+    if (!cryptoOnly) return step;
+    if (step.title === 'Welcome to TamicGroups') return { ...step, description: 'Your cryptocurrency trading platform.' };
+    if (step.title === 'Securities Trading') return { ...step, title: 'Crypto Markets', description: 'Explore and trade supported cryptocurrencies around the clock.' };
+    if (step.title === 'TAMG Shares') return { ...step, title: 'Crypto Holdings', description: 'Follow the value and performance of your digital assets in Portfolio.' };
+    if (step.title === 'Deposits & Withdrawals') return { ...step, description: 'Deposit with crypto and withdraw to your external crypto wallet.' };
+    if (step.title === 'Platform Settings') return { ...step, description: 'Configure crypto deposit addresses, notifications and the global site mode.' };
+    return step;
+  });
   const totalSteps = steps.length;
   
   const handleNext = () => {

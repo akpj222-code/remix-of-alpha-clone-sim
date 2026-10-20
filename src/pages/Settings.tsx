@@ -147,10 +147,10 @@ export default function Settings() {
               <CardTitle className="text-base">Quick Access</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
-              <Link to="/stocks" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+              {!altMode && <Link to="/stocks" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                 <TrendingUp className="h-5 w-5 text-primary" />
                 <span className="text-sm font-medium">Stocks</span>
-              </Link>
+              </Link>}
               <Link to="/crypto" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
                 <Bitcoin className="h-5 w-5 text-primary" />
                 <span className="text-sm font-medium">Crypto</span>
@@ -209,9 +209,10 @@ export default function Settings() {
             <CardContent className="p-4 flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="font-medium text-foreground">Simplified Mode</p>
-                <p className="text-sm text-muted-foreground">Crypto-only deposits and calmer design for all users. Bank details stay saved.</p>
+                <p className="text-sm text-muted-foreground">Crypto-only mode for everyone. Saved bank details and share holdings are preserved.</p>
               </div>
               <Switch
+                aria-label="Simplified Mode"
                 checked={altMode}
                 onCheckedChange={async (v) => {
                   const { error } = await setAltMode(v);
@@ -378,7 +379,7 @@ export default function Settings() {
         </Card>
 
         {/* Bank Details */}
-        <Card>
+        {!altMode && <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
@@ -431,7 +432,7 @@ export default function Settings() {
               {saving ? 'Saving...' : 'Save Bank Details'}
             </Button>
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Account Info */}
         <Card>

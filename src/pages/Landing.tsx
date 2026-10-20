@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TamicLogo } from '@/components/TamicLogo';
 import { StartDemoModal } from '@/components/demo/StartDemoModal';
+import { useAltMode } from '@/hooks/useAltMode';
 
 const features = [
   {
@@ -39,6 +40,12 @@ const features = [
 ];
 
 export default function Landing() {
+  const { enabled: cryptoOnly } = useAltMode();
+  const visibleFeatures = cryptoOnly ? features.map(feature => {
+    if (feature.title === 'Real-Time Trading') return { icon: Bitcoin, title: 'Crypto Trading', description: 'Buy and sell Bitcoin, Ethereum and other digital assets.' };
+    if (feature.title === 'Market Analytics') return { ...feature, description: 'Follow cryptocurrency prices and daily market movements, 24/7.' };
+    return feature;
+  }) : features;
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -72,7 +79,7 @@ export default function Landing() {
               <span className="text-primary">TAMIC GROUP</span>
             </h1>
             <p className="mt-4 sm:mt-6 text-base sm:text-lg text-muted-foreground md:text-xl px-2">
-              Your trusted platform for US stocks and cryptocurrency trading. Start building your investment portfolio today with real-time market data.
+              {cryptoOnly ? 'Your cryptocurrency trading platform. Explore digital assets, manage your crypto portfolio and fund your account with crypto.' : 'Your trusted platform for US stocks and cryptocurrency trading. Start building your investment portfolio today with real-time market data.'}
             </p>
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <Link to="/auth?mode=signup" className="w-full sm:w-auto">
@@ -103,10 +110,10 @@ export default function Landing() {
             Why Choose TAMIC GROUP?
           </h2>
           <p className="text-center text-muted-foreground mb-8 sm:mb-12 max-w-2xl mx-auto text-sm sm:text-base px-2">
-            Your comprehensive investment platform for stocks and cryptocurrency trading
+            {cryptoOnly ? 'Cryptocurrency markets, holdings and wallets in one place' : 'Your comprehensive investment platform for stocks and cryptocurrency trading'}
           </p>
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
+            {visibleFeatures.map((feature) => (
               <Card key={feature.title} className="border-none shadow-md hover:shadow-lg transition-shadow">
                 <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
                   <div className="mb-3 sm:mb-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg gradient-primary">

@@ -15,13 +15,22 @@ const emit = (next: Partial<typeof state>) => {
 };
 
 let started = false;
+let requestId = 0;
 const fetchMode = async () => {
-  const { data } = await supabase
-    .from('admin_settings')
-    .select('setting_value')
-    .eq('setting_key', KEY)
-    .maybeSingle();
-  emit({ enabled: data?.setting_value === 'true', loading: false });
+  const id = ++requestId;
+  try {
+    const { data, error } = await supabase
+      .from('admin_settings')
+      .select('setting_value')
+      .eq('setting_key', KEY)
+      .maybeSingle();
+    if (id !== requestId) return;
+    // Never reset a known global mode because a request failed.
+    if (error) return;
+    emit({ enabled: data?.setting_value === 'true', loading: false });
+  } catch {
+    // Retry on the next poll; first visits wait for the authoritative setting.
+  }
 };
 const start = () => {
   if (started) return;
@@ -32,8 +41,11 @@ const start = () => {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_settings' }, fetchMode)
     .subscribe();
   // Fallback in case realtime is unavailable
-  setInterval(fetchMode, 30000);
+  setInterval(fetchMode, 5000);
   window.addEventListener('focus', fetchMode);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') fetchMode();
+  });
 };
 
 const subscribe = (l: () => void) => {
@@ -47,12 +59,14 @@ export function useAltMode() {
 
   const setMode = async (value: boolean) => {
     const prev = state.enabled;
+    ++requestId;
     emit({ enabled: value });
     const { data } = await supabase.from('admin_settings').select('id').eq('setting_key', KEY).maybeSingle();
     const res = data
       ? await supabase.from('admin_settings').update({ setting_value: String(value) }).eq('setting_key', KEY)
       : await supabase.from('admin_settings').insert({ setting_key: KEY, setting_value: String(value) });
     if (res.error) { emit({ enabled: prev }); return { error: res.error }; }
+    await fetchMode();
     return { error: null };
   };
 
