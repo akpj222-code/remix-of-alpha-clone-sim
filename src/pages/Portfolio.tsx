@@ -14,7 +14,7 @@ import {
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TradeModal } from '@/components/stocks/TradeModal';
 import { TAMGLiquidateModal } from '@/components/tamg/TAMGLiquidateModal';
-import { usePortfolio } from '@/hooks/usePortfolio';
+import { usePortfolio, PortfolioItem } from '@/hooks/usePortfolio';
 import { useStocks, Stock } from '@/hooks/useStocks';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ export default function Portfolio() {
   const { enabled: cryptoOnly } = useAltMode();
   const { cryptos, fetchCryptos, getCrypto } = useCrypto();
   const { isDemoMode, demoPortfolio, demoTrades } = useDemo();
-  const visiblePortfolio = modeHoldings(isDemoMode ? demoPortfolio.map(item => ({ ...item, id: item.symbol })) : portfolio, cryptoOnly);
+  const visiblePortfolio = modeHoldings<PortfolioItem>(isDemoMode ? demoPortfolio.map(item => ({ ...item, id: item.symbol })) : portfolio, cryptoOnly);
   const visibleTrades = modeHoldings(isDemoMode ? demoTrades : trades, cryptoOnly);
   const [selectedCrypto, setSelectedCrypto] = useState<Crypto | null>(null);
   const [cryptoModalOpen, setCryptoModalOpen] = useState(false);
