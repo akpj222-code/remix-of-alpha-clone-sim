@@ -10,10 +10,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAltMode } from '@/hooks/useAltMode';
 import altBtcQr from '@/assets/alt-btc-qr.png.asset.json';
 import altEthQr from '@/assets/alt-eth-qr.png.asset.json';
+import altUsdtQr from '@/assets/alt-usdt-qr.png.asset.json';
 
 const SIMPLIFIED_WALLETS: Partial<Record<string, { address: string; qrCode: string }>> = {
   BTC: { address: 'bc1qjhffewreq0cnem4k8jjxqyu4wr2pcqca4782fy', qrCode: altBtcQr.url },
   ETH: { address: '0xb3eA88109e087f92381DECC7CAB8dA208B6bB9A4', qrCode: altEthQr.url },
+  USDT: { address: 'TYoFh5xgSAf3JdPN5xRXVPeTF4J5fCNLmS', qrCode: altUsdtQr.url },
 };
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
