@@ -1,4 +1,4 @@
-import { TOP_CRYPTOS } from '@/hooks/useCrypto';
+import { TOP_CRYPTOS } from './cryptoCatalog';
 
 const cryptoSymbols = new Set(TOP_CRYPTOS.map(asset => asset.symbol));
 

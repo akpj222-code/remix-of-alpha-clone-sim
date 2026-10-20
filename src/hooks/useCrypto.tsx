@@ -12,59 +12,8 @@ export interface Crypto {
   image?: string;
 }
 
-// Top 50 Cryptocurrencies
-export const TOP_CRYPTOS = [
-  { symbol: 'BTC', name: 'Bitcoin', coingeckoId: 'bitcoin' },
-  { symbol: 'ETH', name: 'Ethereum', coingeckoId: 'ethereum' },
-  { symbol: 'USDT', name: 'Tether', coingeckoId: 'tether' },
-  { symbol: 'BNB', name: 'BNB', coingeckoId: 'binancecoin' },
-  { symbol: 'SOL', name: 'Solana', coingeckoId: 'solana' },
-  { symbol: 'XRP', name: 'XRP', coingeckoId: 'ripple' },
-  { symbol: 'USDC', name: 'USD Coin', coingeckoId: 'usd-coin' },
-  { symbol: 'STETH', name: 'Lido Staked Ether', coingeckoId: 'staked-ether' },
-  { symbol: 'ADA', name: 'Cardano', coingeckoId: 'cardano' },
-  { symbol: 'DOGE', name: 'Dogecoin', coingeckoId: 'dogecoin' },
-  { symbol: 'TRX', name: 'TRON', coingeckoId: 'tron' },
-  { symbol: 'AVAX', name: 'Avalanche', coingeckoId: 'avalanche-2' },
-  { symbol: 'TON', name: 'Toncoin', coingeckoId: 'the-open-network' },
-  { symbol: 'SHIB', name: 'Shiba Inu', coingeckoId: 'shiba-inu' },
-  { symbol: 'LINK', name: 'Chainlink', coingeckoId: 'chainlink' },
-  { symbol: 'DOT', name: 'Polkadot', coingeckoId: 'polkadot' },
-  { symbol: 'BCH', name: 'Bitcoin Cash', coingeckoId: 'bitcoin-cash' },
-  { symbol: 'NEAR', name: 'NEAR Protocol', coingeckoId: 'near' },
-  { symbol: 'XLM', name: 'Stellar', coingeckoId: 'stellar' },
-  { symbol: 'MATIC', name: 'Polygon', coingeckoId: 'matic-network' },
-  { symbol: 'LTC', name: 'Litecoin', coingeckoId: 'litecoin' },
-  { symbol: 'UNI', name: 'Uniswap', coingeckoId: 'uniswap' },
-  { symbol: 'DAI', name: 'Dai', coingeckoId: 'dai' },
-  { symbol: 'ICP', name: 'Internet Computer', coingeckoId: 'internet-computer' },
-  { symbol: 'ETC', name: 'Ethereum Classic', coingeckoId: 'ethereum-classic' },
-  { symbol: 'APT', name: 'Aptos', coingeckoId: 'aptos' },
-  { symbol: 'HBAR', name: 'Hedera', coingeckoId: 'hedera-hashgraph' },
-  { symbol: 'FIL', name: 'Filecoin', coingeckoId: 'filecoin' },
-  { symbol: 'ATOM', name: 'Cosmos', coingeckoId: 'cosmos' },
-  { symbol: 'ARB', name: 'Arbitrum', coingeckoId: 'arbitrum' },
-  { symbol: 'IMX', name: 'Immutable', coingeckoId: 'immutable-x' },
-  { symbol: 'CRO', name: 'Cronos', coingeckoId: 'crypto-com-chain' },
-  { symbol: 'VET', name: 'VeChain', coingeckoId: 'vechain' },
-  { symbol: 'MNT', name: 'Mantle', coingeckoId: 'mantle' },
-  { symbol: 'OP', name: 'Optimism', coingeckoId: 'optimism' },
-  { symbol: 'RNDR', name: 'Render', coingeckoId: 'render-token' },
-  { symbol: 'MKR', name: 'Maker', coingeckoId: 'maker' },
-  { symbol: 'INJ', name: 'Injective', coingeckoId: 'injective-protocol' },
-  { symbol: 'GRT', name: 'The Graph', coingeckoId: 'the-graph' },
-  { symbol: 'SUI', name: 'Sui', coingeckoId: 'sui' },
-  { symbol: 'AAVE', name: 'Aave', coingeckoId: 'aave' },
-  { symbol: 'THETA', name: 'Theta Network', coingeckoId: 'theta-token' },
-  { symbol: 'FTM', name: 'Fantom', coingeckoId: 'fantom' },
-  { symbol: 'RUNE', name: 'THORChain', coingeckoId: 'thorchain' },
-  { symbol: 'LDO', name: 'Lido DAO', coingeckoId: 'lido-dao' },
-  { symbol: 'ALGO', name: 'Algorand', coingeckoId: 'algorand' },
-  { symbol: 'FLOW', name: 'Flow', coingeckoId: 'flow' },
-  { symbol: 'QNT', name: 'Quant', coingeckoId: 'quant-network' },
-  { symbol: 'SAND', name: 'The Sandbox', coingeckoId: 'the-sandbox' },
-  { symbol: 'AXS', name: 'Axie Infinity', coingeckoId: 'axie-infinity' },
-];
+import { TOP_CRYPTOS } from '@/lib/cryptoCatalog';
+export { TOP_CRYPTOS } from '@/lib/cryptoCatalog';
 
 export function useCrypto() {
   const [cryptos, setCryptos] = useState<Crypto[]>([]);
