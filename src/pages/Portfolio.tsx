@@ -19,10 +19,22 @@ import { useStocks, Stock } from '@/hooks/useStocks';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useAltMode } from '@/hooks/useAltMode';
+import { useCrypto, Crypto } from '@/hooks/useCrypto';
+import { CryptoTradeModal } from '@/components/crypto/CryptoTradeModal';
+import { useDemo } from '@/hooks/useDemo';
+import { isCryptoAsset, modeHoldings } from '@/lib/cryptoMode';
 
 export default function Portfolio() {
   const { portfolio, trades, fetchPortfolio } = usePortfolio();
   const { stocks, fetchStocks, getStock } = useStocks();
+  const { enabled: cryptoOnly } = useAltMode();
+  const { cryptos, fetchCryptos, getCrypto } = useCrypto();
+  const { isDemoMode, demoPortfolio, demoTrades } = useDemo();
+  const visiblePortfolio = modeHoldings(isDemoMode ? demoPortfolio.map(item => ({ ...item, id: item.symbol })) : portfolio, cryptoOnly);
+  const visibleTrades = modeHoldings(isDemoMode ? demoTrades : trades, cryptoOnly);
+  const [selectedCrypto, setSelectedCrypto] = useState<Crypto | null>(null);
+  const [cryptoModalOpen, setCryptoModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [tamgPrice, setTamgPrice] = useState<number>(25);
@@ -31,9 +43,12 @@ export default function Portfolio() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchStocks();
-    fetchTamgPrice();
-  }, [fetchStocks]);
+    fetchCryptos();
+    if (!cryptoOnly) {
+      fetchStocks();
+      fetchTamgPrice();
+    }
+  }, [cryptoOnly, fetchCryptos, fetchStocks]);
 
   const fetchTamgPrice = async () => {
     const { data } = await supabase
@@ -47,7 +62,7 @@ export default function Portfolio() {
     }
   };
 
-  const portfolioWithPrices = portfolio.map((item) => {
+  const portfolioWithPrices = visiblePortfolio.map((item) => {
     // For TAMG, use the fetched price from admin_settings
     if (item.isTamg) {
       const currentPrice = tamgPrice;
@@ -66,7 +81,7 @@ export default function Portfolio() {
     }
     
     // For regular stocks
-    const stock = getStock(item.symbol);
+    const stock = isCryptoAsset(item.symbol) ? getCrypto(item.symbol) : getStock(item.symbol);
     const currentPrice = stock?.price || item.average_price;
     const currentValue = item.shares * currentPrice;
     const costBasis = item.shares * item.average_price;
@@ -86,6 +101,14 @@ export default function Portfolio() {
   const totalPL = portfolioWithPrices.reduce((sum, item) => sum + item.unrealizedPL, 0);
 
   const handleTrade = (symbol: string, isTamg?: boolean) => {
+    if (isCryptoAsset(symbol)) {
+      const crypto = getCrypto(symbol);
+      if (crypto) {
+        setSelectedCrypto(crypto);
+        setCryptoModalOpen(true);
+      }
+      return;
+    }
     if (isTamg) {
       // For TAMG, navigate to dashboard where the TAMG card is
       navigate('/dashboard');
@@ -111,7 +134,7 @@ export default function Portfolio() {
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Portfolio</h1>
+          <h1 className="text-2xl font-bold text-foreground">{cryptoOnly ? 'Crypto Portfolio' : 'Portfolio'}</h1>
           <p className="text-muted-foreground">
             Track your investments and performance
           </p>
@@ -162,13 +185,13 @@ export default function Portfolio() {
             <CardTitle>Holdings</CardTitle>
           </CardHeader>
           <CardContent>
-            {portfolio.length === 0 ? (
+            {visiblePortfolio.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">
                   You don't have any holdings yet
                 </p>
-                <Button onClick={() => window.location.href = '/stocks'}>
-                  Browse Stocks
+                <Button onClick={() => navigate(cryptoOnly ? '/crypto' : '/stocks')}>
+                  {cryptoOnly ? 'Browse Crypto' : 'Browse Stocks'}
                 </Button>
               </div>
             ) : (
@@ -177,7 +200,7 @@ export default function Portfolio() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Symbol</TableHead>
-                      <TableHead className="text-right">Shares</TableHead>
+                      <TableHead className="text-right">{cryptoOnly ? 'Quantity' : 'Shares / Units'}</TableHead>
                       <TableHead className="text-right">Avg Price</TableHead>
                       <TableHead className="text-right">Current Price</TableHead>
                       <TableHead className="text-right">Value</TableHead>
@@ -246,14 +269,14 @@ export default function Portfolio() {
         </Card>
 
         {/* Recent Trades */}
-        {trades.length > 0 && (
+        {visibleTrades.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Trade History</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {trades.map((trade) => (
+                {visibleTrades.map((trade) => (
                   <div
                     key={trade.id}
                     className="flex items-center justify-between p-3 rounded-lg border"
@@ -271,7 +294,7 @@ export default function Portfolio() {
                       <div>
                         <p className="font-medium text-foreground">{trade.symbol}</p>
                         <p className="text-xs text-muted-foreground">
-                          {trade.shares.toFixed(4)} shares @ ${trade.price_per_share.toFixed(2)}
+                          {trade.shares.toFixed(4)} {isCryptoAsset(trade.symbol) ? trade.symbol : 'shares'} @ ${trade.price_per_share.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -290,13 +313,17 @@ export default function Portfolio() {
           </Card>
         )}
 
-        <TradeModal
+        <CryptoTradeModal crypto={selectedCrypto} open={cryptoModalOpen} onOpenChange={(open) => {
+          setCryptoModalOpen(open);
+          if (!open) fetchPortfolio();
+        }} />
+        {!cryptoOnly && <TradeModal
           stock={selectedStock}
           open={tradeModalOpen}
           onOpenChange={setTradeModalOpen}
-        />
+        />}
 
-        {selectedTamgHolding && (
+        {!cryptoOnly && selectedTamgHolding && (
           <TAMGLiquidateModal
             open={liquidateModalOpen}
             onOpenChange={setLiquidateModalOpen}

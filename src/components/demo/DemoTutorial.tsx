@@ -3,13 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useDemo, TUTORIAL_STEPS } from '@/hooks/useDemo';
+import { useAltMode } from '@/hooks/useAltMode';
 
 export function DemoTutorial() {
   const { isDemoMode, currentTutorialStep, nextTutorialStep, completeTutorial, isTutorialComplete } = useDemo();
+  const { enabled: cryptoOnly } = useAltMode();
 
   if (!isDemoMode || isTutorialComplete) return null;
 
-  const step = TUTORIAL_STEPS[currentTutorialStep];
+  const originalStep = TUTORIAL_STEPS[currentTutorialStep];
+  const step = cryptoOnly ? { ...originalStep, message: originalStep.message.replace('Stocks and Crypto', 'Crypto').replace('buy or sell shares', 'buy or sell crypto') } : originalStep;
   const progress = ((currentTutorialStep + 1) / TUTORIAL_STEPS.length) * 100;
   const isLastStep = currentTutorialStep === TUTORIAL_STEPS.length - 1;
 
